@@ -1,5 +1,7 @@
 <div align="center">
 
+<a href="https://nahuelbenitezs.github.io/chamuyo/"><img src="public/og.jpg" alt="Chamuyo: the party game where you fool your friends" width="100%" /></a>
+
 # Chamuyo
 
 **The party game where you fool your friends.**
@@ -27,6 +29,7 @@ One shared screen, everyone plays on their phone. 2 to 8 players, in English or 
 - **Angular 22** with signals and zoneless change detection.
 - **The game rules are pure functions** in [`src/app/juego/motor.ts`](src/app/juego/motor.ts), tested with Vitest.
 - **Sound effects are synthesized** with the Web Audio API, so there are no audio files.
+- **Characters** are original stickers; [`scripts/recortar-arte.py`](scripts/recortar-arte.py) cuts them out of the source sheets.
 - **Every phone gets only what it needs to see**: the screen sends each player their own view ([`protocolo.ts`](src/app/juego/protocolo.ts)), so nobody can peek at other players' answers.
 
 ## Run it locally
