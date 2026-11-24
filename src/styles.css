@@ -156,17 +156,43 @@ a {
   line-height: 1;
 }
 
+/* Los personajes son stickers con borde blanco propio: sin fondo, con una sombra dura debajo. */
 .avatar {
-  display: inline-grid;
-  place-items: center;
+  display: inline-block;
   width: 3rem;
   height: 3rem;
-  border-radius: 50%;
-  background: var(--color, var(--superficie-2));
-  box-shadow: 0 0 0 3px var(--texto), 0 4px 0 3px rgb(0 0 0 / 0.5);
-  font-size: 1.6rem;
-  line-height: 1;
+  object-fit: contain;
   flex: none;
+  filter: drop-shadow(0 3px 0 rgb(0 0 0 / 0.5));
+}
+
+@keyframes bamboleo {
+  0%,
+  100% {
+    rotate: -4deg;
+  }
+  50% {
+    rotate: 4deg;
+  }
+}
+
+@keyframes temblor {
+  0%,
+  100% {
+    translate: 0;
+  }
+  20% {
+    translate: -4px 0;
+  }
+  40% {
+    translate: 4px 0;
+  }
+  60% {
+    translate: -3px 0;
+  }
+  80% {
+    translate: 3px 0;
+  }
 }
 
 @keyframes entrar {

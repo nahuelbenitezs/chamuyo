@@ -2,7 +2,7 @@
   <header class="barra">
     <span class="marca titular">Chamuyo</span>
     @if (conexion() !== 'fuera') {
-      <span class="chip"><span class="avatar mini" [style.--color]="colorAvatar()">{{ avatar() }}</span>{{ nombre() }}</span>
+      <span class="chip"><img class="avatar mini" [src]="imagen(avatar())" alt="" />{{ nombreFinal() }}</span>
     } @else {
       <button class="icono-boton" type="button" (click)="idiomaContrario()" [attr.aria-label]="idioma() === 'es' ? 'English' : 'Español'">
         <span class="idioma">{{ idioma() === 'es' ? 'EN' : 'ES' }}</span>
@@ -19,14 +19,16 @@
       </label>
       <label class="campo">
         <span>{{ t().tuNombre }}</span>
-        <input class="entrada" [value]="nombre()" (input)="nombre.set($any($event.target).value)" maxlength="14" autocomplete="nickname" required />
+        <input class="entrada" [value]="nombre()" (input)="nombre.set($any($event.target).value)" maxlength="14" autocomplete="nickname" [placeholder]="nombrePersonaje(avatar(), idioma())" />
       </label>
       <fieldset class="campo personajes">
         <legend>{{ t().elegiPersonaje }}</legend>
         <div class="grilla-personajes">
-          @for (p of personajes; track p.avatar) {
-            <button type="button" class="personaje" [class.elegido]="avatar() === p.avatar" [style.--color]="p.color"
-              [attr.aria-pressed]="avatar() === p.avatar" (click)="avatar.set(p.avatar)">{{ p.avatar }}</button>
+          @for (p of personajes; track p.id) {
+            <button type="button" class="personaje" [class.elegido]="avatar() === p.id" [style.--color]="p.color"
+              [attr.aria-pressed]="avatar() === p.id" [attr.aria-label]="p[idioma()]" (click)="avatar.set(p.id)">
+              <img [src]="imagen(p.id)" alt="" />
+            </button>
           }
         </div>
       </fieldset>
@@ -51,7 +53,7 @@
         }
         @case ('lobby') {
           <section class="mensaje">
-            <span class="avatar grande" [style.--color]="colorAvatar()">{{ v.avatar }}</span>
+            <img class="avatar grande" [src]="imagen(v.avatar, 'grande')" alt="" />
             <h1 class="titular">{{ t().adentro }}, {{ v.nombre }}!</h1>
             @if (v.jefe) {
               <p>{{ t().sosElJefe }}</p>

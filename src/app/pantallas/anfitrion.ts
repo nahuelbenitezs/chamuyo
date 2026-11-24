@@ -18,6 +18,7 @@ import {
   Opcion,
   Partida,
   puedenVotar,
+  puntosPorOpcion,
   puntuar,
   quitarJugador,
   ranking,
@@ -25,7 +26,7 @@ import {
   volverAlLobby,
   votar,
 } from '../juego/motor';
-import { colorDe, partesConsigna } from '../juego/personajes';
+import { colorDe, imagen, partesConsigna } from '../juego/personajes';
 import { idJefe, MsgJugador, vistaPara } from '../juego/protocolo';
 import { Anfitrion } from '../juego/red';
 import { alternarSonido, sfx, sonidoActivo } from '../juego/sonido';
@@ -44,6 +45,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   protected readonly idioma = idioma;
   protected readonly sonidoActivo = sonidoActivo;
   protected readonly colorDe = colorDe;
+  protected readonly imagen = imagen;
   protected readonly partes = partesConsigna;
   protected readonly max = MAX_JUGADORES;
   protected readonly min = MIN_JUGADORES;
@@ -116,7 +118,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   }
 
   protected avatarDe(id: string): string {
-    return this.jugadores().find((j) => j.id === id)?.avatar ?? '❔';
+    return this.jugadores().find((j) => j.id === id)?.avatar ?? '';
   }
 
   protected revelada(o: Opcion): boolean {
@@ -126,8 +128,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
 
   protected puntosDe(o: Opcion): number {
     const r = this.ronda();
-    if (!r || o.verdad) return 0;
-    return o.autores.reduce((s, id) => s + (r.puntosRonda[id] ?? 0), 0) / Math.max(1, o.autores.length);
+    return r ? puntosPorOpcion(r, o) : 0;
   }
 
   protected reintentar(): void {

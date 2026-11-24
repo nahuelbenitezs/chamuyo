@@ -1,6 +1,6 @@
 <div class="escenario" [class.final]="partida().fase === 'final'">
   <header class="barra">
-    <span class="marca titular">Chamuyo</span>
+    <span class="marca"><img src="arte/mascota.webp" alt="" width="40" height="40" /><span class="titular">Chamuyo</span></span>
     @if (codigo() && partida().fase !== 'lobby') {
       <span class="chip">{{ urlCorta() }} · <b class="codigo-chico">{{ codigo() }}</b></span>
     }
@@ -48,7 +48,7 @@
             <ul class="asientos">
               @for (j of jugadores(); track j.id) {
                 <li class="asiento lleno" [class.desconectado]="!j.conectado">
-                  <span class="avatar" [style.--color]="colorDe(j.avatar)">{{ j.avatar }}</span>
+                  <img class="avatar" [src]="imagen(j.avatar)" [alt]="j.nombre" />
                   <span class="nombre">{{ j.nombre }}</span>
                 </li>
               }
@@ -111,7 +111,7 @@
             <ul class="estado-jugadores">
               @for (j of jugadores(); track j.id) {
                 <li [class.listo]="listos().has(j.id)">
-                  <span class="avatar" [style.--color]="colorDe(j.avatar)">{{ j.avatar }}</span>
+                  <img class="avatar" [src]="imagen(j.avatar)" [alt]="j.nombre" />
                   @if (listos().has(j.id)) {
                     <i class="ph-bold ph-check-circle marca-listo"></i>
                   }
@@ -146,7 +146,7 @@
             <ul class="estado-jugadores">
               @for (j of jugadores(); track j.id) {
                 <li [class.listo]="listos().has(j.id)">
-                  <span class="avatar" [style.--color]="colorDe(j.avatar)">{{ j.avatar }}</span>
+                  <img class="avatar" [src]="imagen(j.avatar)" [alt]="j.nombre" />
                   @if (listos().has(j.id)) {
                     <i class="ph-bold ph-check-circle marca-listo"></i>
                   }
@@ -177,7 +177,7 @@
                   @if (revelada(o)) {
                     <div class="votantes">
                       @for (v of o.votantes; track v) {
-                        <span class="avatar chico" [style.--color]="colorDe(avatarDe(v))" [title]="nombreDe(v)">{{ avatarDe(v) }}</span>
+                        <img class="avatar chico" [class.cayo]="!o.verdad && r.tipo === 'chamuyo'" [src]="imagen(avatarDe(v), !o.verdad && r.tipo === 'chamuyo' ? 'sorpresa' : '')" [alt]="nombreDe(v)" [title]="nombreDe(v)" />
                       }
                     </div>
                     <p class="autoria">
@@ -202,7 +202,7 @@
             @if (r.acertaron.length && paso() >= ordenRevelar().length - 1) {
               <p class="instruccion sabian">
                 @for (id of r.acertaron; track id) {
-                  <span class="avatar chico" [style.--color]="colorDe(avatarDe(id))">{{ avatarDe(id) }}</span>
+                  <img class="avatar chico" [src]="imagen(avatarDe(id))" [alt]="nombreDe(id)" />
                 }
                 {{ t().seLaSabian }} <span class="sumados">+{{ ronda()?.puntosRonda?.[r.acertaron[0]] }}</span>
               </p>
@@ -218,7 +218,7 @@
             @for (j of ordenados(); track j.id; let i = $index) {
               <li [style.animation-delay.ms]="i * 80">
                 <span class="lugar titular">{{ i + 1 }}</span>
-                <span class="avatar" [style.--color]="colorDe(j.avatar)">{{ j.avatar }}</span>
+                <img class="avatar" [src]="imagen(j.avatar)" [alt]="j.nombre" />
                 <span class="nombre">{{ j.nombre }}</span>
                 <span class="sumados">{{ ronda()?.puntosRonda?.[j.id] ? '+' + ronda()?.puntosRonda?.[j.id] : '' }}</span>
                 <span class="total titular">{{ j.puntos }}</span>
@@ -231,13 +231,13 @@
       @case ('final') {
         <section class="final-pantalla">
           @if (ordenados()[0]; as ganador) {
-            <p class="corona"><span class="avatar enorme" [style.--color]="colorDe(ganador.avatar)">{{ ganador.avatar }}</span></p>
+            <p class="corona"><img class="avatar enorme" [src]="imagen(ganador.avatar, 'grande')" [alt]="ganador.nombre" /></p>
             <h1 class="titular ganador">{{ ganador.nombre }} {{ t().gano }}</h1>
           }
           <ol class="podio">
             @for (j of ordenados().slice(0, 3); track j.id; let i = $index) {
               <li [class]="'escalon e' + (i + 1)">
-                <span class="avatar" [style.--color]="colorDe(j.avatar)">{{ j.avatar }}</span>
+                <img class="avatar" [src]="imagen(j.avatar)" [alt]="j.nombre" />
                 <span class="nombre">{{ j.nombre }}</span>
                 <span class="total titular">{{ j.puntos }} <small>{{ t().pts }}</small></span>
               </li>

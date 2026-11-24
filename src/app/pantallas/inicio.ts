@@ -3,7 +3,7 @@ import { contenidoEn } from '../contenido/en';
 import { contenidoEs } from '../contenido/es';
 import { cambiarIdioma, idioma, t } from '../i18n';
 import { mezclar } from '../juego/motor';
-import { partesConsigna } from '../juego/personajes';
+import { imagen, PERSONAJES, partesConsigna } from '../juego/personajes';
 
 @Component({
   selector: 'app-inicio',
@@ -17,6 +17,16 @@ export class PantallaInicio implements OnInit, OnDestroy {
   protected readonly t = t;
   protected readonly idioma = idioma;
   protected readonly partes = partesConsigna;
+  protected readonly personajes = PERSONAJES;
+  protected readonly imagen = imagen;
+  protected tocado = signal<string | null>(null);
+  private soltar: ReturnType<typeof setTimeout> | null = null;
+
+  protected tocar(id: string): void {
+    this.tocado.set(id);
+    if (this.soltar) clearTimeout(this.soltar);
+    this.soltar = setTimeout(() => this.tocado.set(null), 1400);
+  }
 
   /** Muestra de juego que va rotando en la portada: un dato real con su verdad y dos mentiras. */
   protected indice = signal(0);

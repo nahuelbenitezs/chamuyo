@@ -10,6 +10,7 @@ import {
   opcionesPara,
   Partida,
   PUNTOS,
+  puntosPorOpcion,
   puntuar,
   responder,
   votar,
@@ -27,7 +28,7 @@ const contenido: Contenido = {
 
 function conJugadores(n: number): Partida {
   let p = nuevaPartida();
-  for (let i = 1; i <= n; i++) p = agregarJugador(p, { id: `j${i}`, nombre: `Jugador ${i}`, avatar: '🦊' });
+  for (let i = 1; i <= n; i++) p = agregarJugador(p, { id: `j${i}`, nombre: `Jugador ${i}`, avatar: 'carpincho' });
   return p;
 }
 
@@ -38,7 +39,7 @@ describe('motor', () => {
 
   it('no deja entrar a nadie después de empezar', () => {
     const p = iniciar(conJugadores(3), 'chamuyo', 1, contenido, azarFijo());
-    expect(agregarJugador(p, { id: 'x', nombre: 'Tarde', avatar: '🐸' }).jugadores).toHaveLength(3);
+    expect(agregarJugador(p, { id: 'x', nombre: 'Tarde', avatar: 'mate' }).jugadores).toHaveLength(3);
   });
 
   it('en Chamuyo premia a quien encuentra la verdad y a quien engaña', () => {
@@ -59,6 +60,9 @@ describe('motor', () => {
     const final = puntuar(p);
     const puntos = Object.fromEntries(final.jugadores.map((j) => [j.id, j.puntos]));
     expect(puntos).toEqual({ j1: PUNTOS.verdad + 2 * PUNTOS.engano, j2: 0, j3: 0 });
+    // La tarjeta de la mentira muestra solo lo que ganó esa mentira, no el total de la ronda.
+    const mentira = final.ronda!.opciones.find((o) => o.autores.includes('j1'))!;
+    expect(puntosPorOpcion(final.ronda!, mentira)).toBe(2 * PUNTOS.engano);
   });
 
   it('quien escribe la verdad suma y no vota', () => {

@@ -275,6 +275,16 @@ export function puntuar(p: Partida): Partida {
   };
 }
 
+/** Puntos que ganó cada autor gracias a una opción puntual (no el total de su ronda). */
+export function puntosPorOpcion(r: Ronda, o: Opcion): number {
+  if (o.verdad || !o.autores.length) return 0;
+  const mult = r.dobles ? 2 : 1;
+  if (r.tipo === 'chamuyo') return PUNTOS.engano * o.votantes.length * mult;
+  const votantes = Object.keys(r.votos).length;
+  const unanime = votantes >= 2 && o.votantes.length === votantes ? PUNTOS.unanime : 0;
+  return (PUNTOS.voto * o.votantes.length + unanime) * mult;
+}
+
 export function avanzar(p: Partida, azar: Azar): Partida {
   if (p.fase === 'revelar') return { ...p, fase: 'tabla' };
   if (p.fase === 'tabla' && p.ronda) return empezarRonda(p, p.ronda.numero, azar);

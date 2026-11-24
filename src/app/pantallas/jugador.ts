@@ -1,7 +1,7 @@
 import { Component, computed, effect, input, OnDestroy, OnInit, signal } from '@angular/core';
 import { cambiarIdioma, idioma, t } from '../i18n';
 import { MAX_LARGO, Modo } from '../juego/motor';
-import { PERSONAJES, partesConsigna } from '../juego/personajes';
+import { imagen, nombrePersonaje, personaje, PERSONAJES, partesConsigna } from '../juego/personajes';
 import { codigoValido, Vista } from '../juego/protocolo';
 import { Cliente } from '../juego/red';
 
@@ -50,12 +50,14 @@ export class PantallaJugador implements OnInit, OnDestroy {
   protected readonly t = t;
   protected readonly idioma = idioma;
   protected readonly personajes = PERSONAJES;
+  protected readonly imagen = imagen;
+  protected readonly nombrePersonaje = nombrePersonaje;
   protected readonly partes = partesConsigna;
   protected readonly maxLargo = MAX_LARGO;
 
   protected codigo = signal('');
   protected nombre = signal(leer('chamuyo-nombre'));
-  protected avatar = signal(leer('chamuyo-avatar') || PERSONAJES[Math.floor(Math.random() * PERSONAJES.length)].avatar);
+  protected avatar = signal<string>(personaje(leer('chamuyo-avatar') || PERSONAJES[Math.floor(Math.random() * PERSONAJES.length)].id).id);
   protected conexion = signal<Conexion>('fuera');
   protected vista = signal<Vista | null>(null);
   protected borrador = signal('');
@@ -63,9 +65,9 @@ export class PantallaJugador implements OnInit, OnDestroy {
   protected fin = signal(0);
   protected ahora = signal(Date.now());
 
-  protected puedeEntrar = computed(() => codigoValido(this.codigo()) && this.nombre().trim().length > 0);
+  protected puedeEntrar = computed(() => codigoValido(this.codigo()));
   protected segundos = computed(() => Math.max(0, Math.ceil((this.fin() - this.ahora()) / 1000)));
-  protected colorAvatar = computed(() => PERSONAJES.find((p) => p.avatar === this.avatar())?.color ?? '#35323b');
+  protected nombreFinal = computed(() => (this.nombre().trim() || nombrePersonaje(this.avatar(), idioma())).slice(0, 14));
 
   private cliente: Cliente | null = null;
   private reloj: ReturnType<typeof setInterval> | null = null;
@@ -99,7 +101,7 @@ export class PantallaJugador implements OnInit, OnDestroy {
 
   protected entrar(): void {
     if (!this.puedeEntrar()) return;
-    const nombre = this.nombre().trim().slice(0, 14);
+    const nombre = this.nombreFinal();
     guardar('chamuyo-nombre', nombre);
     guardar('chamuyo-avatar', this.avatar());
     guardarSesion(this.id);

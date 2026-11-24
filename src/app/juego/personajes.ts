@@ -1,21 +1,37 @@
-/** Personajes que puede elegir cada jugador, con su color de fondo. */
+import { Idioma } from '../i18n';
+
+/** Personajes que puede elegir cada jugador. El id viaja por la red y elige la imagen. */
 export const PERSONAJES = [
-  { avatar: '🦊', color: '#ff8a3d' },
-  { avatar: '🐸', color: '#3ddc84' },
-  { avatar: '🐙', color: '#ff6b9a' },
-  { avatar: '🦄', color: '#b98cff' },
-  { avatar: '🐧', color: '#4cc3ff' },
-  { avatar: '🦁', color: '#ffd23f' },
-  { avatar: '🐼', color: '#e9e6df' },
-  { avatar: '🦖', color: '#7bd389' },
-  { avatar: '🐝', color: '#ffb800' },
-  { avatar: '🦉', color: '#c49a6c' },
-  { avatar: '🐷', color: '#ffa3b5' },
-  { avatar: '👽', color: '#9be15d' },
+  { id: 'carpincho', es: 'Carpincho', en: 'Capybara', color: '#ff8a3d' },
+  { id: 'mate', es: 'Mate', en: 'Mate', color: '#4cc3ff' },
+  { id: 'empanada', es: 'Empanada', en: 'Empanada', color: '#ffd23f' },
+  { id: 'alfajor', es: 'Alfajor', en: 'Alfajor', color: '#b98cff' },
+  { id: 'tero', es: 'Tero', en: 'Lapwing', color: '#e9e6df' },
+  { id: 'yaguarete', es: 'Yaguareté', en: 'Jaguar', color: '#ffb800' },
+  { id: 'perezoso', es: 'Perezoso', en: 'Sloth', color: '#7bd389' },
+  { id: 'tucan', es: 'Tucán', en: 'Toucan', color: '#ff6b9a' },
+  { id: 'llama', es: 'Llama', en: 'Llama', color: '#ff6b5b' },
+  { id: 'mulita', es: 'Mulita', en: 'Armadillo', color: '#c49a6c' },
+  { id: 'choripan', es: 'Choripán', en: 'Choripán', color: '#2ec4b6' },
+  { id: 'hornero', es: 'Hornero', en: 'Hornero', color: '#9be15d' },
 ] as const;
 
-export function colorDe(avatar: string): string {
-  return PERSONAJES.find((p) => p.avatar === avatar)?.color ?? '#35323b';
+export type Variante = '' | 'sorpresa' | 'grande';
+
+export function personaje(id: string) {
+  return PERSONAJES.find((p) => p.id === id) ?? PERSONAJES[0];
+}
+
+export function imagen(id: string, variante: Variante = ''): string {
+  return `arte/personajes/${personaje(id).id}${variante ? '-' + variante : ''}.webp`;
+}
+
+export function colorDe(id: string): string {
+  return personaje(id).color;
+}
+
+export function nombrePersonaje(id: string, idioma: Idioma): string {
+  return personaje(id)[idioma];
 }
 
 /** Parte la consigna en texto y huecos (___) para dibujar el hueco. */
