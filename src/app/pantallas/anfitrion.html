@@ -1,0 +1,253 @@
+<div class="escenario" [class.final]="partida().fase === 'final'">
+  <header class="barra">
+    <span class="marca titular">Chamuyo</span>
+    @if (codigo() && partida().fase !== 'lobby') {
+      <span class="chip">{{ urlCorta() }} · <b class="codigo-chico">{{ codigo() }}</b></span>
+    }
+    <div class="acciones">
+      <button class="icono-boton" type="button" (click)="idiomaContrario()" [attr.aria-label]="idioma() === 'es' ? 'English' : 'Español'">
+        <span class="idioma">{{ idioma() === 'es' ? 'EN' : 'ES' }}</span>
+      </button>
+      <button class="icono-boton" type="button" (click)="alternarSonido()" [attr.aria-label]="t().sonido" [attr.aria-pressed]="sonidoActivo()">
+        <i class="ph-bold" [class.ph-speaker-high]="sonidoActivo()" [class.ph-speaker-slash]="!sonidoActivo()"></i>
+      </button>
+      <button class="icono-boton" type="button" (click)="pantallaCompleta()" [attr.aria-label]="t().pantallaCompleta">
+        <i class="ph-bold ph-corners-out"></i>
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <section class="centro">
+      <p class="aviso">{{ t().errorSala }}</p>
+      <button class="boton" type="button" (click)="reintentar()">{{ t().reintentar }}</button>
+    </section>
+  } @else {
+    @switch (partida().fase) {
+      @case ('lobby') {
+        <section class="lobby">
+          <div class="unirse">
+            @if (codigo(); as c) {
+              <p class="paso-texto">{{ t().entraEn }} <b>{{ urlCorta() }}</b> {{ t().yPone }}</p>
+              <p class="codigo titular" aria-live="polite">{{ c }}</p>
+              <div class="qr-fila">
+                <div class="qr" [innerHTML]="qr()"></div>
+                <button class="boton secundario" type="button" (click)="copiarEnlace()">
+                  <i class="ph-bold" [class.ph-link]="!copiado()" [class.ph-check]="copiado()"></i>
+                  {{ copiado() ? t().enlaceCopiado : t().compartir }}
+                </button>
+              </div>
+            } @else {
+              <p class="paso-texto">{{ t().abriendo }}</p>
+              <p class="codigo titular cargando">····</p>
+            }
+          </div>
+
+          <div class="sala">
+            <h2 class="sala-titulo">{{ t().esperandoJugadores }} <span>{{ jugadores().length }}/{{ max }}</span></h2>
+            <ul class="asientos">
+              @for (j of jugadores(); track j.id) {
+                <li class="asiento lleno" [class.desconectado]="!j.conectado">
+                  <span class="avatar" [style.--color]="colorDe(j.avatar)">{{ j.avatar }}</span>
+                  <span class="nombre">{{ j.nombre }}</span>
+                </li>
+              }
+              @for (v of vacios(); track v) {
+                <li class="asiento vacio"><span class="avatar"></span></li>
+              }
+            </ul>
+
+            <div class="config">
+              <div class="grupo" role="radiogroup" [attr.aria-label]="t().modo">
+                @for (m of ['mixto', 'chamuyo', 'ocurrencias']; track m) {
+                  <button type="button" class="opcion-modo" role="radio" [attr.aria-checked]="modo() === m" (click)="modo.set($any(m))">
+                    <b>{{ m === 'mixto' ? t().modoMixto : m === 'chamuyo' ? t().modoChamuyo : t().modoOcurrencias }}</b>
+                    <small>{{ m === 'mixto' ? t().modoMixtoDesc : m === 'chamuyo' ? t().modoChamuyoDesc : t().modoOcurrenciasDesc }}</small>
+                  </button>
+                }
+              </div>
+              <div class="pie-config">
+                <label class="rondas">
+                  {{ t().rondas }}
+                  <select (change)="rondas.set(+$any($event.target).value)">
+                    @for (n of [4, 6, 8, 10]; track n) {
+                      <option [value]="n" [selected]="n === rondas()">{{ n }}</option>
+                    }
+                  </select>
+                </label>
+                <button class="boton grande" type="button" [disabled]="jugadores().length < min" (click)="empezar()">
+                  <i class="ph-bold ph-play"></i> {{ t().empezar }}
+                </button>
+              </div>
+              @if (jugadores().length < min) {
+                <p class="nota">{{ t().faltaUno }}</p>
+              }
+            </div>
+          </div>
+        </section>
+      }
+
+      @case ('escribir') {
+        @if (ronda(); as r) {
+          <section class="ronda">
+            <div class="ronda-cabeza">
+              <span class="chip">{{ r.dobles ? t().final : t().ronda + ' ' + r.numero + ' ' + t().de + ' ' + partida().totalRondas }}</span>
+              <span class="chip tipo">{{ r.tipo === 'chamuyo' ? t().modoChamuyo : t().modoOcurrencias }}</span>
+              @if (r.dobles) {
+                <span class="chip dobles">{{ t().puntosDobles }}</span>
+              }
+              <span class="reloj titular" [class.urgente]="segundos() <= 10">{{ segundos() }}</span>
+            </div>
+            <h1 class="consigna titular">
+              @for (parte of partes(r.consigna); track $index) {
+                @if (parte.hueco) {
+                  <span class="hueco-grupo"><span class="hueco">&nbsp;</span>{{ parte.texto }}</span>
+                } @else {
+                  {{ parte.texto }}
+                }
+              }
+            </h1>
+            <p class="instruccion">{{ r.tipo === 'chamuyo' ? t().escribanMentira : t().escribanOcurrencia }}</p>
+            <ul class="estado-jugadores">
+              @for (j of jugadores(); track j.id) {
+                <li [class.listo]="listos().has(j.id)">
+                  <span class="avatar" [style.--color]="colorDe(j.avatar)">{{ j.avatar }}</span>
+                  @if (listos().has(j.id)) {
+                    <i class="ph-bold ph-check-circle marca-listo"></i>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+
+      @case ('votar') {
+        @if (ronda(); as r) {
+          <section class="ronda">
+            <div class="ronda-cabeza">
+              <span class="chip">{{ r.tipo === 'chamuyo' ? t().votenVerdad : t().votenMejor }}</span>
+              <span class="reloj titular" [class.urgente]="segundos() <= 10">{{ segundos() }}</span>
+            </div>
+            <p class="consigna-chica">
+              @for (parte of partes(r.consigna); track $index) {
+                @if (parte.hueco) {
+                  <span class="hueco-grupo"><span class="hueco">&nbsp;</span>{{ parte.texto }}</span>
+                } @else {
+                  {{ parte.texto }}
+                }
+              }
+            </p>
+            <ul class="opciones" [style.--cols]="r.opciones.length > 4 ? 3 : 2">
+              @for (o of r.opciones; track o.id; let i = $index) {
+                <li class="tarjeta" [style.animation-delay.ms]="i * 90">{{ o.texto }}</li>
+              }
+            </ul>
+            <ul class="estado-jugadores">
+              @for (j of jugadores(); track j.id) {
+                <li [class.listo]="listos().has(j.id)">
+                  <span class="avatar" [style.--color]="colorDe(j.avatar)">{{ j.avatar }}</span>
+                  @if (listos().has(j.id)) {
+                    <i class="ph-bold ph-check-circle marca-listo"></i>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+
+      @case ('revelar') {
+        @if (ronda(); as r) {
+          <section class="ronda">
+            <p class="consigna-chica">
+              @for (parte of partes(r.consigna); track $index) {
+                @if (parte.hueco) {
+                  <span class="hueco-grupo"><span class="hueco">&nbsp;</span>{{ parte.texto }}</span>
+                } @else {
+                  {{ parte.texto }}
+                }
+              }
+            </p>
+            <ul class="opciones" [style.--cols]="r.opciones.length > 4 ? 3 : 2">
+              @for (o of r.opciones; track o.id) {
+                <li class="tarjeta" [class.revelada]="revelada(o)" [class.verdad]="revelada(o) && o.verdad"
+                  [class.mentira]="revelada(o) && !o.verdad && r.tipo === 'chamuyo'" [class.apagada]="!revelada(o) && paso() >= 0">
+                  <span class="texto">{{ o.texto }}</span>
+                  @if (revelada(o)) {
+                    <div class="votantes">
+                      @for (v of o.votantes; track v) {
+                        <span class="avatar chico" [style.--color]="colorDe(avatarDe(v))" [title]="nombreDe(v)">{{ avatarDe(v) }}</span>
+                      }
+                    </div>
+                    <p class="autoria">
+                      @if (o.verdad) {
+                        <b>{{ t().laVerdad }}</b>
+                      } @else if (o.senuelo) {
+                        {{ t().dePlantilla }}
+                      } @else {
+                        @if (r.tipo === 'chamuyo') {
+                          {{ t().chamuyoDe }}
+                        }
+                        <b>{{ nombreDe(o.autores[0]) }}{{ o.autores.length > 1 ? ' +' + (o.autores.length - 1) : '' }}</b>
+                      }
+                      @if (puntosDe(o) > 0) {
+                        <span class="sumados">+{{ puntosDe(o) }}</span>
+                      }
+                    </p>
+                  }
+                </li>
+              }
+            </ul>
+            @if (r.acertaron.length && paso() >= ordenRevelar().length - 1) {
+              <p class="instruccion sabian">
+                @for (id of r.acertaron; track id) {
+                  <span class="avatar chico" [style.--color]="colorDe(avatarDe(id))">{{ avatarDe(id) }}</span>
+                }
+                {{ t().seLaSabian }} <span class="sumados">+{{ ronda()?.puntosRonda?.[r.acertaron[0]] }}</span>
+              </p>
+            }
+          </section>
+        }
+      }
+
+      @case ('tabla') {
+        <section class="tabla">
+          <h1 class="titular tabla-titulo">{{ t().tabla }}</h1>
+          <ol class="posiciones">
+            @for (j of ordenados(); track j.id; let i = $index) {
+              <li [style.animation-delay.ms]="i * 80">
+                <span class="lugar titular">{{ i + 1 }}</span>
+                <span class="avatar" [style.--color]="colorDe(j.avatar)">{{ j.avatar }}</span>
+                <span class="nombre">{{ j.nombre }}</span>
+                <span class="sumados">{{ ronda()?.puntosRonda?.[j.id] ? '+' + ronda()?.puntosRonda?.[j.id] : '' }}</span>
+                <span class="total titular">{{ j.puntos }}</span>
+              </li>
+            }
+          </ol>
+        </section>
+      }
+
+      @case ('final') {
+        <section class="final-pantalla">
+          @if (ordenados()[0]; as ganador) {
+            <p class="corona"><span class="avatar enorme" [style.--color]="colorDe(ganador.avatar)">{{ ganador.avatar }}</span></p>
+            <h1 class="titular ganador">{{ ganador.nombre }} {{ t().gano }}</h1>
+          }
+          <ol class="podio">
+            @for (j of ordenados().slice(0, 3); track j.id; let i = $index) {
+              <li [class]="'escalon e' + (i + 1)">
+                <span class="avatar" [style.--color]="colorDe(j.avatar)">{{ j.avatar }}</span>
+                <span class="nombre">{{ j.nombre }}</span>
+                <span class="total titular">{{ j.puntos }} <small>{{ t().pts }}</small></span>
+              </li>
+            }
+          </ol>
+          <div class="final-acciones">
+            <button class="boton grande" type="button" (click)="jugarOtra()"><i class="ph-bold ph-arrow-clockwise"></i> {{ t().jugarOtra }}</button>
+          </div>
+        </section>
+      }
+    }
+  }
+</div>

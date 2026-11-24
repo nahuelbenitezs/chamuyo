@@ -1,0 +1,150 @@
+<div class="celular">
+  <header class="barra">
+    <span class="marca titular">Chamuyo</span>
+    @if (conexion() !== 'fuera') {
+      <span class="chip"><span class="avatar mini" [style.--color]="colorAvatar()">{{ avatar() }}</span>{{ nombre() }}</span>
+    } @else {
+      <button class="icono-boton" type="button" (click)="idiomaContrario()" [attr.aria-label]="idioma() === 'es' ? 'English' : 'Español'">
+        <span class="idioma">{{ idioma() === 'es' ? 'EN' : 'ES' }}</span>
+      </button>
+    }
+  </header>
+
+  @if (conexion() === 'fuera' || conexion() === 'sin-sala') {
+    <form class="unirse" (submit)="$event.preventDefault(); entrar()">
+      <label class="campo">
+        <span>{{ t().codigo }}</span>
+        <input class="entrada codigo" [value]="codigo()" (input)="escribirCodigo($any($event.target).value)"
+          autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" maxlength="4" placeholder="ABCD" required />
+      </label>
+      <label class="campo">
+        <span>{{ t().tuNombre }}</span>
+        <input class="entrada" [value]="nombre()" (input)="nombre.set($any($event.target).value)" maxlength="14" autocomplete="nickname" required />
+      </label>
+      <fieldset class="campo personajes">
+        <legend>{{ t().elegiPersonaje }}</legend>
+        <div class="grilla-personajes">
+          @for (p of personajes; track p.avatar) {
+            <button type="button" class="personaje" [class.elegido]="avatar() === p.avatar" [style.--color]="p.color"
+              [attr.aria-pressed]="avatar() === p.avatar" (click)="avatar.set(p.avatar)">{{ p.avatar }}</button>
+          }
+        </div>
+      </fieldset>
+      @if (conexion() === 'sin-sala') {
+        <p class="error" role="alert">{{ t().sinSala }}</p>
+      }
+      <button class="boton ancho" type="submit" [disabled]="!puedeEntrar()">{{ t().entrar }}</button>
+    </form>
+  } @else if (conexion() === 'conectando' && !vista()) {
+    <section class="mensaje"><p>{{ t().conectando }}</p></section>
+  } @else {
+    @if (conexion() === 'caido') {
+      <p class="aviso-red" role="status">{{ t().reconectando }}</p>
+    }
+    @if (vista(); as v) {
+      @switch (v.v) {
+        @case ('lleno') {
+          <section class="mensaje"><p>{{ t().salaLlena }}</p><button class="boton secundario" type="button" (click)="salir()">OK</button></section>
+        }
+        @case ('empezada') {
+          <section class="mensaje"><p>{{ t().salaEmpezada }}</p></section>
+        }
+        @case ('lobby') {
+          <section class="mensaje">
+            <span class="avatar grande" [style.--color]="colorAvatar()">{{ v.avatar }}</span>
+            <h1 class="titular">{{ t().adentro }}, {{ v.nombre }}!</h1>
+            @if (v.jefe) {
+              <p>{{ t().sosElJefe }}</p>
+              <div class="modos" role="radiogroup">
+                @for (m of ['mixto', 'chamuyo', 'ocurrencias']; track m) {
+                  <button type="button" class="modo" role="radio" [attr.aria-checked]="modoElegido() === m" (click)="modoElegido.set($any(m))">
+                    {{ m === 'mixto' ? t().modoMixto : m === 'chamuyo' ? t().modoChamuyo : t().modoOcurrencias }}
+                  </button>
+                }
+              </div>
+              <button class="boton ancho" type="button" [disabled]="v.cantidad < 2" (click)="empezar()">
+                {{ t().empezar }} · {{ v.cantidad }} {{ t().jugadores }}
+              </button>
+            } @else {
+              <p>{{ t().esperandoA }} <b>{{ v.nombreJefe }}</b> · {{ v.cantidad }} {{ t().jugadores }}</p>
+            }
+          </section>
+        }
+        @case ('escribir') {
+          <section class="turno">
+            <div class="cabeza">
+              <span class="chip">{{ t().ronda }} {{ v.ronda }}/{{ v.total }}</span>
+              <span class="reloj" [class.urgente]="segundos() <= 10">{{ segundos() }}{{ t().segundos }}</span>
+            </div>
+            <p class="consigna">
+              @for (parte of partes(v.consigna); track $index) {
+                @if (parte.hueco) {
+                  <span class="hueco-grupo"><span class="hueco">&nbsp;</span>{{ parte.texto }}</span>
+                } @else {
+                  {{ parte.texto }}
+                }
+              }
+            </p>
+            @if (v.enviado) {
+              <div class="enviado">
+                <i class="ph-bold ph-check-circle"></i>
+                <p>“{{ v.enviado }}”</p>
+                <small>{{ t().listo }}</small>
+              </div>
+            } @else {
+              <form class="responder" (submit)="$event.preventDefault(); mandar()">
+                <label class="campo">
+                  <span>{{ v.tipo === 'chamuyo' ? t().tuMentira : t().tuRespuesta }}</span>
+                  <textarea class="entrada" rows="3" [value]="borrador()" (input)="borrador.set($any($event.target).value)"
+                    [attr.maxlength]="maxLargo" enterkeyhint="send" (keydown.enter)="$event.preventDefault(); mandar()"></textarea>
+                </label>
+                <div class="pie-respuesta">
+                  <small>{{ borrador().length }}/{{ maxLargo }}</small>
+                  <button class="boton" type="submit" [disabled]="!borrador().trim()">{{ t().mandar }} <i class="ph-bold ph-paper-plane-right"></i></button>
+                </div>
+              </form>
+            }
+          </section>
+        }
+        @case ('acerto') {
+          <section class="mensaje"><span class="sello">🎯</span><p>{{ t().teLaSabias }}</p></section>
+        }
+        @case ('votar') {
+          <section class="turno">
+            <div class="cabeza">
+              <span class="chip">{{ v.tipo === 'chamuyo' ? t().elegiVerdad : t().elegiMejor }}</span>
+              <span class="reloj" [class.urgente]="segundos() <= 10">{{ segundos() }}{{ t().segundos }}</span>
+            </div>
+            @if (v.elegido) {
+              <div class="enviado">
+                <i class="ph-bold ph-check-circle"></i>
+                <small>{{ t().votoListo }}</small>
+              </div>
+            } @else {
+              <ul class="votos">
+                @for (o of v.opciones; track o.id) {
+                  <li><button type="button" class="voto" (click)="votar(o.id)">{{ o.texto }}</button></li>
+                }
+              </ul>
+            }
+          </section>
+        }
+        @case ('mirar') {
+          <section class="mensaje"><i class="ph-bold ph-television-simple tele"></i><p>{{ t().mira }}</p></section>
+        }
+        @case ('final') {
+          <section class="mensaje">
+            <p class="puesto titular">{{ v.puesto }}°</p>
+            <p>{{ t().terminaste }} {{ v.puesto }}° {{ t().puesto }} {{ t().conPuntos }} <b>{{ v.puntos }}</b> {{ t().pts }}</p>
+            <p class="tenue">{{ t().ganoNombre }} {{ v.ganador }}</p>
+            @if (v.jefe) {
+              <button class="boton ancho" type="button" (click)="otra()">{{ t().jugarOtra }}</button>
+            } @else {
+              <p class="tenue">{{ t().esperandoOtra }}</p>
+            }
+          </section>
+        }
+      }
+    }
+  }
+</div>

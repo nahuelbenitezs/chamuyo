@@ -1,0 +1,10 @@
+{
+  "name": "Chamuyo",
+  "short_name": "Chamuyo",
+  "description": "El juego de fiesta para engañar a tus amigos.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#131215",
+  "theme_color": "#131215",
+  "icons": [{ "src": "icono.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

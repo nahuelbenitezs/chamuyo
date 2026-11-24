@@ -1,0 +1,298 @@
+:host {
+  display: block;
+}
+
+.celular {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 1.25rem;
+  width: min(520px, 100%);
+  margin: 0 auto;
+  padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+}
+
+.barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.marca {
+  font-size: 1.5rem;
+  color: var(--acento);
+}
+
+.idioma {
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.avatar.mini {
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 0.95rem;
+}
+
+.chip {
+  color: var(--texto);
+}
+
+.campo {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.campo > span,
+.campo legend {
+  padding: 0;
+  font-weight: 700;
+  color: var(--tenue);
+}
+
+.entrada {
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 1.15rem;
+  font-weight: 700;
+  resize: none;
+  transition: border-color 0.2s;
+}
+
+.entrada:focus {
+  outline: none;
+  border-color: var(--acento);
+}
+
+.entrada::placeholder {
+  color: #77737e;
+}
+
+.entrada.codigo {
+  font-size: 2rem;
+  font-stretch: 75%;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.unirse {
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+}
+
+.grilla-personajes {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+}
+
+.personaje {
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  background: var(--superficie);
+  font-size: 1.6rem;
+  line-height: 1;
+  transition: transform 0.2s var(--ease), background-color 0.2s;
+}
+
+.personaje.elegido {
+  background: var(--color);
+  transform: scale(1.08);
+  box-shadow: 0 0 0 3px var(--fondo), 0 0 0 5px var(--color);
+}
+
+.boton.ancho {
+  width: 100%;
+  min-height: 3.6rem;
+  font-size: 1.15rem;
+}
+
+.error {
+  margin: 0;
+  color: var(--mentira);
+  font-weight: 700;
+}
+
+.aviso-red {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radio);
+  background: rgb(255 107 91 / 0.15);
+  color: var(--mentira);
+  font-weight: 700;
+}
+
+.mensaje {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 1rem;
+  text-align: center;
+  font-size: 1.15rem;
+  animation: entrar 0.5s var(--ease) both;
+}
+
+.mensaje p {
+  margin: 0;
+  max-width: 30ch;
+}
+
+.mensaje h1 {
+  margin: 0;
+  font-size: 2.6rem;
+}
+
+.avatar.grande {
+  width: 6rem;
+  height: 6rem;
+  font-size: 3.4rem;
+  animation: rebote 0.7s var(--ease) both;
+}
+
+.modos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.modo {
+  min-height: 2.9rem;
+  border: 0;
+  border-radius: var(--radio-boton);
+  background: var(--superficie);
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.modo[aria-checked='true'] {
+  background: var(--superficie-2);
+  box-shadow: inset 0 0 0 2px var(--acento);
+}
+
+.turno {
+  display: grid;
+  align-content: start;
+  gap: 1.1rem;
+  animation: entrar 0.45s var(--ease) both;
+}
+
+.cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reloj {
+  font-weight: 900;
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--tenue);
+}
+
+.reloj.urgente {
+  color: var(--mentira);
+}
+
+.consigna {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-stretch: 85%;
+  line-height: 1.15;
+}
+
+.responder {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pie-respuesta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--tenue);
+}
+
+.enviado {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  border-radius: var(--radio);
+  background: var(--superficie);
+  text-align: center;
+}
+
+.enviado i {
+  font-size: 2.4rem;
+  color: var(--verdad);
+}
+
+.enviado p {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.enviado small {
+  color: var(--tenue);
+}
+
+.votos {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.voto {
+  width: 100%;
+  min-height: 3.6rem;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: var(--radio);
+  background: var(--superficie);
+  text-align: left;
+  font-size: 1.15rem;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 2px var(--borde);
+  transition: transform 0.15s var(--ease), box-shadow 0.2s;
+}
+
+.voto:active {
+  transform: scale(0.98);
+  box-shadow: inset 0 0 0 2px var(--acento);
+}
+
+.sello {
+  font-size: 4rem;
+  animation: rebote 0.7s var(--ease) both;
+}
+
+.tele {
+  font-size: 3.5rem;
+  color: var(--acento);
+}
+
+.puesto {
+  font-size: 6rem;
+  color: var(--acento);
+}
+
+.tenue {
+  color: var(--tenue);
+}

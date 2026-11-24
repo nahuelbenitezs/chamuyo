@@ -1,0 +1,243 @@
+:host {
+  display: block;
+}
+
+.portada {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+  padding: 16px clamp(16px, 3vw, 40px) 40px;
+}
+
+.barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 64px;
+}
+
+.marca {
+  font-size: 1.9rem;
+  color: var(--acento);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--texto);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.nav a:hover {
+  color: var(--acento);
+}
+
+.idioma {
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.heroe {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: center;
+  gap: clamp(24px, 5vw, 80px);
+  min-height: calc(100dvh - 140px);
+  padding: clamp(16px, 4vw, 64px) 0;
+}
+
+.heroe h1 {
+  margin: 0;
+  font-size: clamp(2.8rem, 6.2vw, 5.6rem);
+  max-width: 13ch;
+  animation: entrar 0.7s var(--ease) both;
+}
+
+.bajada {
+  margin: 1.25rem 0 2rem;
+  max-width: 42ch;
+  font-size: clamp(1.1rem, 1.5vw, 1.3rem);
+  color: var(--tenue);
+  animation: entrar 0.7s var(--ease) 0.1s both;
+}
+
+.ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  animation: entrar 0.7s var(--ease) 0.2s both;
+}
+
+.boton.grande {
+  min-height: 3.75rem;
+  padding: 0 1.8rem;
+  font-size: 1.15rem;
+}
+
+.muestra {
+  margin: 0;
+  padding: clamp(20px, 2.5vw, 32px);
+  border-radius: 22px;
+  background:
+    radial-gradient(80% 60% at 20% 0%, rgb(255 210 63 / 0.16), transparent 70%),
+    var(--superficie);
+  box-shadow: var(--sombra);
+  rotate: 1.5deg;
+  animation: entrar 0.8s var(--ease) 0.25s both;
+}
+
+.muestra .consigna {
+  min-height: 3.4em;
+  margin: 0 0 1.25rem;
+  font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+  font-weight: 800;
+  font-stretch: 82%;
+  line-height: 1.1;
+}
+
+.opciones {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opciones li {
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radio);
+  background: var(--superficie-2);
+  font-size: 1.2rem;
+  font-weight: 800;
+  animation: entrar 0.45s var(--ease) both;
+  transition: background-color 0.4s, color 0.4s, opacity 0.4s;
+}
+
+.opciones li:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.opciones li:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.opciones li.verdad {
+  background: var(--verdad);
+  color: #062614;
+}
+
+.opciones li.apagada {
+  opacity: 0.4;
+}
+
+.como {
+  padding: clamp(40px, 7vw, 96px) 0 clamp(24px, 4vw, 48px);
+}
+
+.como h2 {
+  margin: 0 0 2rem;
+  font-size: clamp(2.2rem, 4.5vw, 3.8rem);
+}
+
+.pasos {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: clamp(16px, 2.5vw, 32px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pasos li {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding-top: 1.25rem;
+  border-top: 2px solid var(--borde);
+}
+
+.pasos i {
+  font-size: 2.2rem;
+  color: var(--acento);
+}
+
+.pasos p {
+  margin: 0;
+  font-size: 1.15rem;
+  max-width: 34ch;
+}
+
+.modos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(12px, 2vw, 24px);
+  padding: clamp(24px, 4vw, 48px) 0;
+}
+
+.modo {
+  padding: clamp(24px, 3vw, 40px);
+  border-radius: 22px;
+  min-height: 15rem;
+  display: grid;
+  align-content: end;
+}
+
+.modo h3 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+}
+
+.modo p {
+  margin: 0;
+  font-size: 1.15rem;
+  max-width: 36ch;
+}
+
+.modo.chamuyo {
+  background: var(--acento);
+  color: var(--acento-tinta);
+}
+
+.modo.ocurrencias {
+  background:
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.03) 0 14px, transparent 14px 28px),
+    var(--superficie-2);
+}
+
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--borde);
+  color: var(--tenue);
+}
+
+@media (max-width: 860px) {
+  .heroe {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .muestra {
+    rotate: 0deg;
+  }
+
+  .pasos,
+  .modos {
+    grid-template-columns: 1fr;
+  }
+
+  .nav a:first-child {
+    display: none;
+  }
+}

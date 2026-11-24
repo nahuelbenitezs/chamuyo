@@ -1,0 +1,67 @@
+<div class="portada">
+  <header class="barra">
+    <span class="marca titular">Chamuyo</span>
+    <nav class="nav">
+      <a href="#como">{{ t().comoSeJuega }}</a>
+      <a href="https://github.com/nahuelbenitezs/chamuyo" target="_blank" rel="noopener"><i class="ph-bold ph-github-logo"></i> GitHub</a>
+      <button class="icono-boton" type="button" (click)="idiomaContrario()" [attr.aria-label]="idioma() === 'es' ? 'English' : 'Español'">
+        <span class="idioma">{{ idioma() === 'es' ? 'EN' : 'ES' }}</span>
+      </button>
+    </nav>
+  </header>
+
+  <section class="heroe">
+    <div class="texto">
+      <h1 class="titular">{{ t().lema }}</h1>
+      <p class="bajada">{{ t().bajada }}</p>
+      <div class="ctas">
+        <button class="boton grande" type="button" (click)="crear.emit()"><i class="ph-bold ph-television-simple"></i> {{ t().crearSala }}</button>
+        <button class="boton secundario grande" type="button" (click)="unirse.emit()"><i class="ph-bold ph-device-mobile"></i> {{ t().tengoCodigo }}</button>
+      </div>
+    </div>
+
+    <figure class="muestra" aria-hidden="true">
+      @if (muestra(); as m) {
+        <p class="consigna">
+          @for (parte of partes(m.texto); track $index) {
+            @if (parte.hueco) {
+              <span class="hueco-grupo"><span class="hueco">&nbsp;</span>{{ parte.texto }}</span>
+            } @else {
+              {{ parte.texto }}
+            }
+          }
+        </p>
+        <ul class="opciones">
+          @for (o of m.opciones; track o + indice()) {
+            <li [class.verdad]="revelado() && o === m.verdad" [class.apagada]="revelado() && o !== m.verdad">{{ o }}</li>
+          }
+        </ul>
+      }
+    </figure>
+  </section>
+
+  <section class="como" id="como">
+    <h2 class="titular">{{ t().comoSeJuega }}</h2>
+    <ol class="pasos">
+      <li><i class="ph-bold ph-television-simple"></i><p>{{ t().paso1 }}</p></li>
+      <li><i class="ph-bold ph-qr-code"></i><p>{{ t().paso2 }}</p></li>
+      <li><i class="ph-bold ph-mask-happy"></i><p>{{ t().paso3 }}</p></li>
+    </ol>
+  </section>
+
+  <section class="modos">
+    <article class="modo chamuyo">
+      <h3 class="titular">{{ t().modoChamuyo }}</h3>
+      <p>{{ t().modoChamuyoDesc }}</p>
+    </article>
+    <article class="modo ocurrencias">
+      <h3 class="titular">{{ t().modoOcurrencias }}</h3>
+      <p>{{ t().modoOcurrenciasDesc }}</p>
+    </article>
+  </section>
+
+  <footer class="pie">
+    <span>{{ t().codigoAbierto }} · <a href="https://github.com/nahuelbenitezs/chamuyo" target="_blank" rel="noopener">github.com/nahuelbenitezs/chamuyo</a></span>
+    <span>{{ t().hechoPor }} <a href="https://github.com/nahuelbenitezs" target="_blank" rel="noopener">Nahuel Benítez</a></span>
+  </footer>
+</div>
