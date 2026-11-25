@@ -45,3 +45,6 @@ Thumbs.db
 
 # Arte original generado aparte (los recortes van a public/)
 /arte
+
+# Material para redes (no va al sitio)
+/lanzamiento

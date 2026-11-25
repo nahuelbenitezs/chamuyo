@@ -168,6 +168,9 @@ export async function dibujarTarjeta(r: Resumen): Promise<Blob> {
   ctx.fillText(textos.jugaGratis, W / 2, H - 186);
   fuente(ctx, 900, 46, true);
   ctx.fillText(URL_JUEGO, W / 2, H - 134);
+  ctx.fillStyle = COLOR.tenue;
+  fuente(ctx, 700, 32);
+  ctx.fillText('Instagram @chamuyo.juego', W / 2, H - 48);
 
   return new Promise((ok, mal) => lienzo.toBlob((b) => (b ? ok(b) : mal(new Error('sin imagen'))), 'image/png'));
 }

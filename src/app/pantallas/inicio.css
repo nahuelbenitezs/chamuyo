@@ -101,8 +101,19 @@
   animation: entrar 0.7s var(--ease) both;
 }
 
+.sublema {
+  margin: 0.9rem 0 0;
+  max-width: 24ch;
+  font-size: clamp(1.4rem, 2.1vw, 1.9rem);
+  font-weight: 800;
+  font-stretch: 85%;
+  line-height: 1.15;
+  color: var(--acento);
+  animation: entrar 0.7s var(--ease) 0.05s both;
+}
+
 .bajada {
-  margin: 1.25rem 0 2rem;
+  margin: 1rem 0 2rem;
   max-width: 40ch;
   font-size: clamp(1.1rem, 1.4vw, 1.3rem);
   color: var(--tenue);

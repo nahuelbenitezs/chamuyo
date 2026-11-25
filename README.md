@@ -1,10 +1,10 @@
 <div align="center">
 
-<a href="https://nahuelbenitezs.github.io/chamuyo/"><img src="public/og.jpg" alt="Chamuyo: the party game where you fool your friends" width="100%" /></a>
+<a href="https://nahuelbenitezs.github.io/chamuyo/"><img src="public/og.jpg" alt="Chamuyo: truth or bluff? The party game where the best bluffer wins" width="100%" /></a>
 
 # Chamuyo
 
-**The party game where you fool your friends.**
+**Truth or bluff?** The party game where the best bluffer wins.
 One shared screen, everyone plays on their phone. 2 to 8 players, in English or Spanish. Free, nothing to install, no accounts.
 
 **[▶ Play now](https://nahuelbenitezs.github.io/chamuyo/)** · [Español](#español)
@@ -15,7 +15,7 @@ One shared screen, everyone plays on their phone. 2 to 8 players, in English or 
 
 1. **Open a room** on a TV or a computer. Sharing your screen on a video call works too.
 2. **Join from your phone** by scanning the QR code or typing the 4-letter code.
-3. **Fool everyone.** Write believable lies, vote for the truth and laugh at everyone else's answers.
+3. **Bluff your way to the top.** Make up believable answers, find the truth and laugh at everyone else's ideas.
 
 ### Modes
 
@@ -50,13 +50,13 @@ All the content lives in [`src/app/contenido`](src/app/contenido), one file per 
 
 ## License
 
-[MIT](LICENSE). Made by [Nahuel Benítez](https://github.com/nahuelbenitezs).
+[MIT](LICENSE). Made by [Nahuel Benítez](https://github.com/nahuelbenitezs). Follow the game on [Instagram](https://www.instagram.com/chamuyo.juego/).
 
 ---
 
 ## Español
 
-**El juego de fiesta para engañar a tus amigos.** Una pantalla para todos y cada uno juega desde su celular. De 2 a 8 personas, en español o inglés. Gratis, sin instalar nada y sin cuentas.
+**¿Verdad o chamuyo?** El juego de fiesta donde gana el que mejor chamuya. Una pantalla para todos y cada uno juega desde su celular. De 2 a 8 personas, en español o inglés. Gratis, sin instalar nada y sin cuentas.
 
 **[▶ Jugar ahora](https://nahuelbenitezs.github.io/chamuyo/)**
 
@@ -64,7 +64,7 @@ All the content lives in [`src/app/contenido`](src/app/contenido), one file per 
 
 1. **Abrí una sala** en la tele o la compu. También funciona compartiendo pantalla en una videollamada.
 2. **Entrá desde el celular** escaneando el QR o con el código de 4 letras.
-3. **Chamuyá.** Escribí mentiras creíbles, votá la verdad y reíte de las respuestas de los demás.
+3. **Chamuyá.** Inventá respuestas creíbles, encontrá la verdad y reíte con las ocurrencias de los demás.
 
 ### Modos
 

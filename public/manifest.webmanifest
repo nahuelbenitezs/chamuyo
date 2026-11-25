@@ -1,7 +1,7 @@
 {
   "name": "Chamuyo",
   "short_name": "Chamuyo",
-  "description": "El juego de fiesta para engañar a tus amigos.",
+  "description": "¿Verdad o chamuyo? El juego de fiesta donde gana el que mejor chamuya.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#131215",
