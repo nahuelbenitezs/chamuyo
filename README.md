@@ -29,7 +29,7 @@ One shared screen, everyone plays on their phone. 2 to 8 players, in English or 
 - **Angular 22** with signals and zoneless change detection.
 - **The game rules are pure functions** in [`src/app/juego/motor.ts`](src/app/juego/motor.ts), tested with Vitest.
 - **Sound effects are synthesized** with the Web Audio API, so there are no audio files.
-- **Characters** are original stickers; [`scripts/recortar-arte.py`](scripts/recortar-arte.py) cuts them out of the source sheets.
+- **Characters** are original stickers (all rights reserved, see [LICENSE-ART.md](LICENSE-ART.md)); [`scripts/recortar-arte.py`](scripts/recortar-arte.py) cuts them out of the source sheets.
 - **Share card**: at the end, every player can share a story-sized image with the winner and the lie of the night, drawn on a canvas in the browser ([`tarjeta.ts`](src/app/juego/tarjeta.ts)).
 - **Privacy**: anonymous visit and game counts with [GoatCounter](https://www.goatcounter.com/), without cookies or personal data.
 - **Every phone gets only what it needs to see**: the screen sends each player their own view ([`protocolo.ts`](src/app/juego/protocolo.ts)), so nobody can peek at other players' answers.
@@ -50,7 +50,10 @@ All the content lives in [`src/app/contenido`](src/app/contenido), one file per 
 
 ## License
 
-[MIT](LICENSE). Made by [Nahuel Benítez](https://github.com/nahuelbenitezs). Follow the game on [Instagram](https://www.instagram.com/chamuyo.juego/).
+- **Code:** [MIT](LICENSE). Use it, learn from it and build your own game with it.
+- **Artwork and brand:** the characters, the mascot, the illustrations and the Chamuyo name and logo are © 2026 Nahuel Benítez, all rights reserved. See [LICENSE-ART.md](LICENSE-ART.md). If you fork the game, replace the art and use a different name.
+
+Made by [Nahuel Benítez](https://github.com/nahuelbenitezs). Follow the game on [Instagram](https://www.instagram.com/chamuyo.juego/).
 
 ---
 
@@ -75,3 +78,7 @@ All the content lives in [`src/app/contenido`](src/app/contenido), one file per 
 ### Cómo funciona
 
 No hay servidor de juego: la pantalla que abre la sala maneja toda la partida y los celulares se conectan directo a ella por WebRTC con PeerJS. Está hecho con Angular 22, y las reglas del juego son funciones puras con tests en Vitest.
+
+### Licencia
+
+El **código** es abierto, con licencia [MIT](LICENSE). Los **personajes, la mascota, las ilustraciones y el nombre y logo de Chamuyo** son © 2026 Nahuel Benítez, con todos los derechos reservados: no se pueden usar en otros juegos ni productos sin permiso. Más detalles en [LICENSE-ART.md](LICENSE-ART.md).

@@ -24,6 +24,8 @@ const es = {
   elencoBajada: 'Tocá uno para ver la cara que pone cuando lo chamuyan.',
   cierre: '¿Quién chamuya mejor en tu grupo?',
   hechoPor: 'Hecho por',
+  derechos: '© 2026 Nahuel Benítez. Personajes, ilustraciones y marca: todos los derechos reservados.',
+  verLicencia: 'Ver licencia',
   // Anfitrión
   abriendo: 'Abriendo la sala…',
   entraEn: 'Entrá desde el celular en',
@@ -122,6 +124,8 @@ const en: typeof es = {
   elencoBajada: 'Tap one to see the face it makes when it gets fooled.',
   cierre: 'Who is the best bluffer in your group?',
   hechoPor: 'Made by',
+  derechos: '© 2026 Nahuel Benítez. Characters, illustrations and brand: all rights reserved.',
+  verLicencia: 'See license',
   abriendo: 'Opening the room…',
   entraEn: 'On your phone, go to',
   yPone: 'and enter the code',

@@ -455,3 +455,8 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+.pie .derechos {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+}
