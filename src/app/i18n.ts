@@ -21,7 +21,7 @@ const es = {
   codigoAbierto: 'Código abierto',
   seguinos: 'Seguinos en Instagram',
   elencoTitulo: 'Elegí tu chamuyero',
-  elencoBajada: 'Tocá uno para ver la cara que pone cuando lo engañan.',
+  elencoBajada: 'Tocá uno para ver la cara que pone cuando lo chamuyan.',
   cierre: '¿Quién chamuya mejor en tu grupo?',
   hechoPor: 'Hecho por',
   // Anfitrión
