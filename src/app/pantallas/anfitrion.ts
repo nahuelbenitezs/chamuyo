@@ -7,6 +7,7 @@ import { cambiarIdioma, idioma, t } from '../i18n';
 import {
   agregarJugador,
   avanzar,
+  claveDe,
   cerrarEscritura,
   faltanResponder,
   faltanVotar,
@@ -27,7 +28,9 @@ import {
   votar,
 } from '../juego/motor';
 import { colorDe, imagen, partesConsigna } from '../juego/personajes';
-import { idJefe, MsgJugador, vistaPara } from '../juego/protocolo';
+import { contar } from '../juego/analitica';
+import { idJefe, MsgJugador, resumen, vistaPara } from '../juego/protocolo';
+import { compartirTarjeta } from '../juego/tarjeta';
 import { Anfitrion } from '../juego/red';
 import { alternarSonido, sfx, sonidoActivo } from '../juego/sonido';
 
@@ -60,6 +63,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   protected ahora = signal(Date.now());
   protected paso = signal(-1);
   protected copiado = signal(false);
+  protected compartiendo = signal(false);
 
   private red = new Anfitrion({
     abierta: (codigo) => this.alAbrir(codigo),
@@ -165,8 +169,23 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     if (p.fase !== 'lobby' || p.jugadores.length < MIN_JUGADORES) return;
     this.modo.set(modo);
     const contenido = idioma() === 'es' ? contenidoEs : contenidoEn;
-    this.partida.set(iniciar(p, modo, this.rondas(), contenido, Math.random));
+    const usados = leerUsados();
+    const nueva = iniciar(p, modo, this.rondas(), contenido, Math.random, usados);
+    guardarUsados([...usados, ...nueva.plan.map(claveDe)]);
+    this.partida.set(nueva);
+    contar(`partida-empezada/${modo}`);
     this.entrarEscribir();
+  }
+
+  protected async compartir(): Promise<void> {
+    if (this.compartiendo()) return;
+    this.compartiendo.set(true);
+    try {
+      await compartirTarjeta(resumen(this.partida()));
+      contar('resultado-compartido/pantalla');
+    } finally {
+      this.compartiendo.set(false);
+    }
   }
 
   protected jugarOtra(): void {
@@ -180,6 +199,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
 
   private alAbrir(codigo: string): void {
     this.codigo.set(codigo);
+    contar('sala-creada');
     QRCode.toString(this.urlSala(), {
       type: 'svg',
       margin: 0,
@@ -193,7 +213,10 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
       const antes = this.partida();
       const despues = agregarJugador(antes, { id: msg.id, nombre: msg.nombre, avatar: msg.avatar });
       this.jugadorDe.set(conexion, msg.id);
-      if (despues.jugadores.length > antes.jugadores.length) sfx.entra();
+      if (despues.jugadores.length > antes.jugadores.length) {
+        sfx.entra();
+        contar('jugador-unido');
+      }
       this.partida.set(despues);
       this.difundir();
       return;
@@ -301,6 +324,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
 
   private terminar(): void {
     this.cancelar();
+    contar('partida-terminada');
     this.fin.set(0);
     sfx.fanfarria();
     this.difundir();
@@ -334,5 +358,24 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     } catch {
       /* no todos los navegadores lo permiten */
     }
+  }
+}
+
+/** Lo que ya salió en partidas anteriores de esta pantalla, para no repetirlo enseguida. */
+const CLAVE_USADOS = 'chamuyo-usados';
+
+function leerUsados(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(CLAVE_USADOS) ?? '[]') as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+function guardarUsados(claves: string[]): void {
+  try {
+    localStorage.setItem(CLAVE_USADOS, JSON.stringify([...new Set(claves)].slice(-400)));
+  } catch {
+    /* sin almacenamiento */
   }
 }

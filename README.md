@@ -30,6 +30,8 @@ One shared screen, everyone plays on their phone. 2 to 8 players, in English or 
 - **The game rules are pure functions** in [`src/app/juego/motor.ts`](src/app/juego/motor.ts), tested with Vitest.
 - **Sound effects are synthesized** with the Web Audio API, so there are no audio files.
 - **Characters** are original stickers; [`scripts/recortar-arte.py`](scripts/recortar-arte.py) cuts them out of the source sheets.
+- **Share card**: at the end, every player can share a story-sized image with the winner and the lie of the night, drawn on a canvas in the browser ([`tarjeta.ts`](src/app/juego/tarjeta.ts)).
+- **Privacy**: anonymous visit and game counts with [GoatCounter](https://www.goatcounter.com/), without cookies or personal data.
 - **Every phone gets only what it needs to see**: the screen sends each player their own view ([`protocolo.ts`](src/app/juego/protocolo.ts)), so nobody can peek at other players' answers.
 
 ## Run it locally

@@ -56,6 +56,16 @@ export interface Partida {
   totalRondas: number;
   ronda: Ronda | null;
   plan: Array<{ tipo: TipoRonda; dato?: Dato; consigna?: string }>;
+  /** La respuesta más votada de la partida: la mentira que más engañó o la ocurrencia que más gustó. */
+  destacado: Destacado | null;
+}
+
+export interface Destacado {
+  tipo: TipoRonda;
+  consigna: string;
+  texto: string;
+  autores: string[];
+  votos: number;
 }
 
 export const MAX_JUGADORES = 8;
@@ -89,7 +99,7 @@ export function limpiarTexto(texto: string): string {
 }
 
 export function nuevaPartida(): Partida {
-  return { fase: 'lobby', modo: 'mixto', jugadores: [], totalRondas: 0, ronda: null, plan: [] };
+  return { fase: 'lobby', modo: 'mixto', jugadores: [], totalRondas: 0, ronda: null, plan: [], destacado: null };
 }
 
 export function agregarJugador(p: Partida, j: Omit<Jugador, 'puntos' | 'conectado'>): Partida {
@@ -114,16 +124,27 @@ export function quitarJugador(p: Partida, id: string): Partida {
   return { ...p, jugadores: p.jugadores.filter((x) => x.id !== id) };
 }
 
+/** Clave estable de un contenido, para recordar qué ya salió en partidas anteriores. */
+export function claveDe(paso: { dato?: Dato; consigna?: string }): string {
+  return paso.dato ? 'd:' + normalizar(paso.dato.texto) : 'c:' + normalizar(paso.consigna ?? '');
+}
+
+/** Mezcla la lista dejando al final (que es lo primero que se saca) lo que todavía no salió. */
+function priorizarNuevos<T>(lista: readonly T[], clave: (x: T) => string, usados: ReadonlySet<string>, azar: Azar): T[] {
+  return [...mezclar(lista.filter((x) => usados.has(clave(x))), azar), ...mezclar(lista.filter((x) => !usados.has(clave(x))), azar)];
+}
+
 export function iniciar(
   p: Partida,
   modo: Modo,
   rondas: number,
   contenido: Contenido,
   azar: Azar,
+  usados: ReadonlySet<string> = new Set(),
 ): Partida {
   if (p.jugadores.length < MIN_JUGADORES) return p;
-  const datos = mezclar(contenido.datos, azar);
-  const consignas = mezclar(contenido.consignas, azar);
+  const datos = priorizarNuevos(contenido.datos, (dato) => claveDe({ dato }), usados, azar);
+  const consignas = priorizarNuevos(contenido.consignas, (consigna) => claveDe({ consigna }), usados, azar);
   const plan: Partida['plan'] = [];
   for (let i = 0; i < rondas; i++) {
     const tipo: TipoRonda = modo === 'mixto' ? (i % 2 === 0 ? 'chamuyo' : 'ocurrencias') : modo;
@@ -137,6 +158,7 @@ export function iniciar(
     totalRondas: plan.length,
     jugadores: p.jugadores.map((j) => ({ ...j, puntos: 0 })),
     ronda: null,
+    destacado: null,
   };
   return empezarRonda(base, 0, azar);
 }
@@ -267,9 +289,20 @@ export function puntuar(p: Partida): Partida {
     }
   }
 
+  let destacado = p.destacado;
+  for (const o of opciones) {
+    if (o.verdad || o.senuelo || !o.autores.length || !o.votantes.length) continue;
+    // En empate gana la más reciente, salvo que le quite el lugar a una mentira (es lo más lindo de compartir).
+    const empataYEsMejor = destacado && o.votantes.length === destacado.votos && (r.tipo === 'chamuyo' || destacado.tipo !== 'chamuyo');
+    if (!destacado || o.votantes.length > destacado.votos || empataYEsMejor) {
+      destacado = { tipo: r.tipo, consigna: r.consigna, texto: o.texto, autores: o.autores, votos: o.votantes.length };
+    }
+  }
+
   return {
     ...p,
     fase: 'revelar',
+    destacado,
     ronda: { ...r, opciones, puntosRonda: ganados },
     jugadores: p.jugadores.map((j) => ({ ...j, puntos: j.puntos + (ganados[j.id] ?? 0) })),
   };
@@ -292,7 +325,7 @@ export function avanzar(p: Partida, azar: Azar): Partida {
 }
 
 export function volverAlLobby(p: Partida): Partida {
-  return { ...p, fase: 'lobby', ronda: null, plan: [], totalRondas: 0, jugadores: p.jugadores.filter((j) => j.conectado) };
+  return { ...p, fase: 'lobby', ronda: null, plan: [], totalRondas: 0, destacado: null, jugadores: p.jugadores.filter((j) => j.conectado) };
 }
 
 export function ranking(p: Partida): Jugador[] {

@@ -604,6 +604,10 @@
 }
 
 .final-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.9rem;
   margin-top: 1rem;
 }
 

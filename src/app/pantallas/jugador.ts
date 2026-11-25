@@ -2,7 +2,9 @@ import { Component, computed, effect, input, OnDestroy, OnInit, signal } from '@
 import { cambiarIdioma, idioma, t } from '../i18n';
 import { MAX_LARGO, Modo } from '../juego/motor';
 import { imagen, nombrePersonaje, personaje, PERSONAJES, partesConsigna } from '../juego/personajes';
-import { codigoValido, Vista } from '../juego/protocolo';
+import { contar } from '../juego/analitica';
+import { codigoValido, Resumen, Vista } from '../juego/protocolo';
+import { compartirTarjeta } from '../juego/tarjeta';
 import { Cliente } from '../juego/red';
 
 type Conexion = 'fuera' | 'conectando' | 'conectado' | 'sin-sala' | 'caido';
@@ -64,6 +66,7 @@ export class PantallaJugador implements OnInit, OnDestroy {
   protected modoElegido = signal<Modo>('mixto');
   protected fin = signal(0);
   protected ahora = signal(Date.now());
+  protected compartiendo = signal(false);
 
   protected puedeEntrar = computed(() => codigoValido(this.codigo()));
   protected segundos = computed(() => Math.max(0, Math.ceil((this.fin() - this.ahora()) / 1000)));
@@ -133,6 +136,17 @@ export class PantallaJugador implements OnInit, OnDestroy {
 
   protected empezar(): void {
     this.cliente?.enviar({ t: 'empezar', modo: this.modoElegido() });
+  }
+
+  protected async compartir(r: Resumen): Promise<void> {
+    if (this.compartiendo()) return;
+    this.compartiendo.set(true);
+    try {
+      await compartirTarjeta(r);
+      contar('resultado-compartido/celular');
+    } finally {
+      this.compartiendo.set(false);
+    }
   }
 
   protected otra(): void {

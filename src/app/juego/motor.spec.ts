@@ -1,5 +1,6 @@
 import {
   agregarJugador,
+  claveDe,
   avanzar,
   cerrarEscritura,
   Contenido,
@@ -104,5 +105,27 @@ describe('motor', () => {
     p = cerrarEscritura(p, azarFijo());
     p = avanzar(avanzar(p, azarFijo()), azarFijo());
     expect(p.fase).toBe('final');
+  });
+
+  it('guarda la mentira que más engañó como destacada', () => {
+    let p = iniciar(conJugadores(3), 'chamuyo', 1, contenido, azarFijo());
+    p = responder(p, 'j1', 'siete');
+    p = responder(p, 'j2', 'nueve');
+    p = responder(p, 'j3', 'once');
+    p = cerrarEscritura(p, azarFijo());
+    const deJ1 = p.ronda!.opciones.find((o) => o.autores.includes('j1'))!.id;
+    p = votar(p, 'j2', deJ1);
+    p = votar(p, 'j3', deJ1);
+    p = puntuar(p);
+    expect(p.destacado).toEqual(
+      expect.objectContaining({ tipo: 'chamuyo', texto: 'siete', autores: ['j1'], votos: 2 }),
+    );
+  });
+
+  it('prefiere el contenido que todavía no salió', () => {
+    const muchas: Contenido = { datos: [], consignas: ['uno', 'dos', 'tres', 'cuatro'] };
+    const usados = new Set(['uno', 'dos', 'tres'].map((consigna) => claveDe({ consigna })));
+    const p = iniciar(conJugadores(2), 'ocurrencias', 1, muchas, azarFijo(), usados);
+    expect(p.ronda!.consigna).toBe('cuatro');
   });
 });

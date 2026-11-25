@@ -17,7 +17,23 @@ export type Vista =
   | { v: 'acerto'; consigna: string }
   | { v: 'votar'; tipo: TipoRonda; consigna: string; opciones: Array<{ id: string; texto: string }>; elegido: string | null; restante: number }
   | { v: 'mirar'; motivo: 'votando' | 'revelando' | 'tabla' | 'sin-opciones' }
-  | { v: 'final'; puesto: number; puntos: number; jefe: boolean; ganador: string };
+  | { v: 'final'; puesto: number; puntos: number; jefe: boolean; ganador: string; resumen: Resumen };
+
+/** Lo necesario para dibujar la tarjeta para compartir al final de la partida. */
+export interface Resumen {
+  podio: Array<{ nombre: string; avatar: string; puntos: number }>;
+  destacado: { tipo: TipoRonda; consigna: string; texto: string; autor: string; avatar: string; votos: number } | null;
+}
+
+export function resumen(p: Partida): Resumen {
+  const orden = ranking(p);
+  const d = p.destacado;
+  const autor = d ? p.jugadores.find((j) => j.id === d.autores[0]) : undefined;
+  return {
+    podio: orden.slice(0, 3).map(({ nombre, avatar, puntos }) => ({ nombre, avatar, puntos })),
+    destacado: d && autor ? { tipo: d.tipo, consigna: d.consigna, texto: d.texto, autor: autor.nombre, avatar: autor.avatar, votos: d.votos } : null,
+  };
+}
 
 export const PREFIJO_SALA = 'chamuyo-v1-';
 const LETRAS = 'BCDFGHJKLMNPQRSTVWXZ';
@@ -73,6 +89,7 @@ export function vistaPara(p: Partida, id: string, restante: number): Vista {
         puntos: yo.puntos,
         jefe,
         ganador: orden[0]?.nombre ?? '',
+        resumen: resumen(p),
       };
     }
   }

@@ -247,6 +247,9 @@
           </ol>
           <div class="final-acciones">
             <button class="boton grande" type="button" (click)="jugarOtra()"><i class="ph-bold ph-arrow-clockwise"></i> {{ t().jugarOtra }}</button>
+            <button class="boton secundario grande" type="button" (click)="compartir()" [disabled]="compartiendo()">
+              <i class="ph-bold ph-share-network"></i> {{ compartiendo() ? t().preparando : t().compartirResultado }}
+            </button>
           </div>
         </section>
       }

@@ -85,6 +85,14 @@ const es = {
   ganoNombre: 'Ganó',
   esperandoOtra: 'Esperando que alguien arranque otra',
   segundos: 's',
+  compartirResultado: 'Compartir resultado',
+  preparando: 'Preparando…',
+  mentiraNoche: 'La mentira de la noche',
+  ocurrenciaNoche: 'La ocurrencia de la noche',
+  engano: (n: number) => (n === 1 ? 'engañó a 1 persona' : `engañó a ${n} personas`),
+  votos: (n: number) => (n === 1 ? '1 voto' : `${n} votos`),
+  jugaGratis: 'Jugá gratis en',
+  textoCompartir: '¿Quién chamuya mejor? Jugá gratis desde el celular:',
 };
 
 const en: typeof es = {
@@ -168,6 +176,14 @@ const en: typeof es = {
   ganoNombre: 'Winner:',
   esperandoOtra: 'Waiting for someone to start another game',
   segundos: 's',
+  compartirResultado: 'Share result',
+  preparando: 'Getting it ready…',
+  mentiraNoche: 'Lie of the night',
+  ocurrenciaNoche: 'Line of the night',
+  engano: (n: number) => (n === 1 ? 'fooled 1 person' : `fooled ${n} people`),
+  votos: (n: number) => (n === 1 ? '1 vote' : `${n} votes`),
+  jugaGratis: 'Play free at',
+  textoCompartir: 'Who is the best liar? Play free on your phone:',
 };
 
 const TEXTOS = { es, en };

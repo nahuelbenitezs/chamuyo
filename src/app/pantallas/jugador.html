@@ -142,8 +142,11 @@
             <p class="puesto titular">{{ v.puesto }}°</p>
             <p>{{ t().terminaste }} {{ v.puesto }}° {{ t().puesto }} {{ t().conPuntos }} <b>{{ v.puntos }}</b> {{ t().pts }}</p>
             <p class="tenue">{{ t().ganoNombre }} {{ v.ganador }}</p>
+            <button class="boton ancho" type="button" (click)="compartir(v.resumen)" [disabled]="compartiendo()">
+              <i class="ph-bold ph-share-network"></i> {{ compartiendo() ? t().preparando : t().compartirResultado }}
+            </button>
             @if (v.jefe) {
-              <button class="boton ancho" type="button" (click)="otra()">{{ t().jugarOtra }}</button>
+              <button class="boton secundario ancho" type="button" (click)="otra()">{{ t().jugarOtra }}</button>
             } @else {
               <p class="tenue">{{ t().esperandoOtra }}</p>
             }
