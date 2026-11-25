@@ -67,6 +67,14 @@ export class PantallaJugador implements OnInit, OnDestroy {
   protected fin = signal(0);
   protected ahora = signal(Date.now());
   protected compartiendo = signal(false);
+  protected opinion = signal<number | null>(null);
+  protected readonly caritas = [
+    { valor: 1, emoji: '😴' },
+    { valor: 2, emoji: '😐' },
+    { valor: 3, emoji: '🙂' },
+    { valor: 4, emoji: '😄' },
+    { valor: 5, emoji: '🤩' },
+  ];
 
   protected puedeEntrar = computed(() => codigoValido(this.codigo()));
   protected segundos = computed(() => Math.max(0, Math.ceil((this.fin() - this.ahora()) / 1000)));
@@ -147,6 +155,13 @@ export class PantallaJugador implements OnInit, OnDestroy {
     } finally {
       this.compartiendo.set(false);
     }
+  }
+
+  /** Opinión de un toque al final de la partida; se cuenta de forma anónima. */
+  protected opinar(valor: number): void {
+    if (this.opinion() !== null) return;
+    this.opinion.set(valor);
+    contar(`opinion/${valor}`);
   }
 
   protected otra(): void {

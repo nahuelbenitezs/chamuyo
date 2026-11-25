@@ -150,6 +150,21 @@
             } @else {
               <p class="tenue">{{ t().esperandoOtra }}</p>
             }
+            <div class="opinion">
+              @if (opinion() === null) {
+                <p>{{ t().opinionPregunta }}</p>
+                <div class="caritas" role="group" [attr.aria-label]="t().opinionPregunta">
+                  @for (c of caritas; track c.valor) {
+                    <button type="button" class="carita" (click)="opinar(c.valor)" [attr.aria-label]="c.valor + '/5'">{{ c.emoji }}</button>
+                  }
+                </div>
+              } @else {
+                <p>{{ t().opinionGracias }}</p>
+              }
+              <a class="contanos" href="https://ig.me/m/chamuyo.juego" target="_blank" rel="noopener">
+                <i class="ph-bold ph-chat-circle-text"></i> {{ t().opinionContanos }}
+              </a>
+            </div>
           </section>
         }
       }
