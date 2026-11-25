@@ -231,6 +231,8 @@
 .elenco {
   width: min(1240px, 100%);
   margin: 0 auto;
+  border-radius: 28px;
+  background-size: 300px;
   padding: clamp(32px, 6vw, 80px) clamp(16px, 3vw, 40px);
   text-align: center;
 }
@@ -324,6 +326,18 @@
   min-height: 15rem;
   display: grid;
   align-content: end;
+}
+
+.modo img {
+  width: min(100%, 22rem);
+  height: auto;
+  margin: -0.5rem auto 1rem;
+  filter: drop-shadow(0 8px 0 rgb(0 0 0 / 0.35));
+  transition: transform 0.4s var(--ease);
+}
+
+.modo:hover img {
+  transform: rotate(-3deg) scale(1.04);
 }
 
 .modo h3 {

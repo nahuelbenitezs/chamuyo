@@ -1,4 +1,4 @@
-<div class="celular">
+<div class="celular" style="background-image: url(arte/patron.webp)">
   <header class="barra">
     <span class="marca titular">Chamuyo</span>
     @if (conexion() !== 'fuera') {
@@ -33,15 +33,18 @@
         </div>
       </fieldset>
       @if (conexion() === 'sin-sala') {
-        <p class="error" role="alert">{{ t().sinSala }}</p>
+        <div class="sin-sala" role="alert">
+          <img src="arte/estado-perdido.webp" alt="" />
+          <p class="error">{{ t().sinSala }}</p>
+        </div>
       }
       <button class="boton ancho" type="submit" [disabled]="!puedeEntrar()">{{ t().entrar }}</button>
     </form>
   } @else if (conexion() === 'conectando' && !vista()) {
-    <section class="mensaje"><p>{{ t().conectando }}</p></section>
+    <section class="mensaje"><img class="estado" src="arte/estado-conectando.webp" alt="" /><p>{{ t().conectando }}</p></section>
   } @else {
     @if (conexion() === 'caido') {
-      <p class="aviso-red" role="status">{{ t().reconectando }}</p>
+      <p class="aviso-red" role="status"><img src="arte/estado-conectando.webp" alt="" />{{ t().reconectando }}</p>
     }
     @if (vista(); as v) {
       @switch (v.v) {

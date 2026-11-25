@@ -1,4 +1,5 @@
 <div class="escenario" [class.final]="partida().fase === 'final'">
+  <img class="fondo" src="arte/escenario.webp" alt="" aria-hidden="true" />
   <header class="barra">
     <span class="marca"><img src="arte/mascota.webp" alt="" width="40" height="40" /><span class="titular">Chamuyo</span></span>
     @if (codigo() && partida().fase !== 'lobby') {
@@ -19,6 +20,7 @@
 
   @if (error()) {
     <section class="centro">
+      <img class="estado" src="arte/estado-perdido.webp" alt="" />
       <p class="aviso">{{ t().errorSala }}</p>
       <button class="boton" type="button" (click)="reintentar()">{{ t().reintentar }}</button>
     </section>
@@ -53,7 +55,7 @@
                 </li>
               }
               @for (v of vacios(); track v) {
-                <li class="asiento vacio"><span class="avatar"></span></li>
+                <li class="asiento vacio"><img class="avatar" src="arte/estado-vacio.webp" alt="" /></li>
               }
             </ul>
 

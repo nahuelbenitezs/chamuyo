@@ -4,6 +4,8 @@
 
 .celular {
   min-height: 100dvh;
+  background-size: 320px;
+  background-repeat: repeat;
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 1.25rem;
@@ -305,4 +307,37 @@
 
 .tenue {
   color: var(--tenue);
+}
+
+.estado {
+  width: 10rem;
+  height: 10rem;
+  object-fit: contain;
+  animation: rebote 0.6s var(--ease) both, bamboleo 1.6s ease-in-out 0.6s infinite;
+}
+
+.sin-sala {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  animation: entrar 0.4s var(--ease) both;
+}
+
+.sin-sala img {
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+}
+
+.aviso-red {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.aviso-red img {
+  width: 2.4rem;
+  height: 2.4rem;
+  object-fit: contain;
 }

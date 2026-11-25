@@ -48,6 +48,24 @@ def recortes(hoja: Image.Image, columnas: int = 4, filas: int = 3) -> list[Image
     return piezas
 
 
+def fila(hoja: Image.Image, cantidad: int) -> list[Image.Image]:
+    """Separa los `cantidad` stickers más grandes de una hoja, ordenados de izquierda a derecha."""
+    rgba = np.array(hoja.convert("RGBA"))
+    alfa = rgba[..., 3] > 128
+    etiquetas, total = ndimage.label(alfa)
+    areas = ndimage.sum(alfa, etiquetas, range(1, total + 1))
+    mayores = sorted(range(total), key=lambda i: -areas[i])[:cantidad]
+    cajas = ndimage.find_objects(etiquetas)
+    piezas = []
+    for i in sorted(mayores, key=lambda i: cajas[i][1].start):
+        fy, fx = cajas[i]
+        recorte = rgba[fy, fx].copy()
+        mascara = ndimage.binary_dilation(etiquetas[fy, fx] == i + 1, iterations=3)
+        recorte[..., 3] = np.where(mascara, recorte[..., 3], 0)
+        piezas.append(Image.fromarray(recorte))
+    return piezas
+
+
 def cuadrado(im: Image.Image, lado: int) -> Image.Image:
     escala = lado * 0.94 / max(im.size)
     im = im.resize((round(im.width * escala), round(im.height * escala)), Image.LANCZOS)
@@ -90,6 +108,24 @@ def main() -> None:
 
     portada = Image.open(ARTE / "portada.webp").convert("RGB")
     portada.save(SALIDA / "portada.webp", quality=86)
+
+    # Fondos: el escenario va detrás de las rondas en la tele; el patrón, en los celulares.
+    Image.open(ARTE / "escenario.webp").convert("RGB").save(SALIDA / "escenario.webp", quality=82)
+    Image.open(ARTE / "patron.webp").convert("RGB").resize((512, 512), Image.LANCZOS).save(SALIDA / "patron.webp", quality=80)
+
+    # Hojas con stickers sueltos en una fila, de izquierda a derecha.
+    for hoja, nombres, lado in (
+        ("modos.webp", ["modo-chamuyo", "modo-ocurrencias"], 640),
+        ("estados.webp", ["estado-vacio", "estado-conectando", "estado-perdido"], 360),
+    ):
+        for nombre, pieza in zip(nombres, fila(Image.open(ARTE / hoja), len(nombres))):
+            cuadrado(pieza, lado).save(SALIDA / f"{nombre}.webp", quality=88)
+
+    # Portadas de destacados de Instagram: quedan en arte/, fuera del sitio.
+    (ARTE / "instagram").mkdir(exist_ok=True)
+    # Los círculos se tocan entre sí: se cortan por grilla.
+    for i, pieza in enumerate(recortes(Image.open(ARTE / "instagram-destacados.webp"), columnas=5, filas=1), 1):
+        cuadrado(pieza, 1080).save(ARTE / "instagram" / f"destacado-{i}.png")
     print("listo:", sorted(p.name for p in (SALIDA / "personajes").iterdir())[:4], "...")
 
 
