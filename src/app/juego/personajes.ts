@@ -14,6 +14,12 @@ export const PERSONAJES = [
   { id: 'mulita', es: 'Mulita', en: 'Armadillo', color: '#c49a6c' },
   { id: 'choripan', es: 'Choripán', en: 'Choripán', color: '#2ec4b6' },
   { id: 'hornero', es: 'Hornero', en: 'Hornero', color: '#9be15d' },
+  { id: 'tortafrita', es: 'Torta frita', en: 'Fried dough', color: '#f4a259' },
+  { id: 'churro', es: 'Churro', en: 'Churro', color: '#e76f51' },
+  { id: 'arepa', es: 'Arepa', en: 'Arepa', color: '#f2cc8f' },
+  { id: 'coxinha', es: 'Coxinha', en: 'Coxinha', color: '#81b29a' },
+  { id: 'palta', es: 'Palta', en: 'Avocado', color: '#a7c957' },
+  { id: 'taco', es: 'Taco', en: 'Taco', color: '#ef476f' },
 ] as const;
 
 export type Variante = '' | 'sorpresa' | 'grande';

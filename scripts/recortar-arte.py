@@ -13,6 +13,7 @@ ARTE = RAIZ / "arte"
 SALIDA = RAIZ / "public" / "arte"
 IDS = ["carpincho", "mate", "empanada", "alfajor", "tero", "yaguarete",
        "perezoso", "tucan", "llama", "mulita", "choripan", "hornero"]
+IDS_NUEVOS = ["tortafrita", "churro", "arepa", "coxinha", "palta", "taco"]
 
 
 def corte(perfil: np.ndarray, centro: int, margen: int) -> int:
@@ -89,10 +90,16 @@ def sin_fondo_oscuro(im: Image.Image) -> Image.Image:
 
 def main() -> None:
     (SALIDA / "personajes").mkdir(parents=True, exist_ok=True)
-    for hoja, sufijo in (("personajes.webp", ""), ("sorpresa.webp", "-sorpresa")):
-        piezas = recortes(Image.open(ARTE / hoja))
-        assert len(piezas) == 12, f"{hoja}: {len(piezas)} stickers"
-        for nombre, pieza in zip(IDS, piezas):
+    hojas = (
+        ("personajes.webp", "", IDS, 4, 3),
+        ("sorpresa.webp", "-sorpresa", IDS, 4, 3),
+        ("personajes-nuevos.webp", "", IDS_NUEVOS, 3, 2),
+        ("sorpresa-nuevos.webp", "-sorpresa", IDS_NUEVOS, 3, 2),
+    )
+    for hoja, sufijo, ids, columnas, filas in hojas:
+        piezas = recortes(Image.open(ARTE / hoja), columnas, filas)
+        assert len(piezas) == len(ids), f"{hoja}: {len(piezas)} stickers"
+        for nombre, pieza in zip(ids, piezas):
             cuadrado(pieza, 256).save(SALIDA / "personajes" / f"{nombre}{sufijo}.webp", quality=88)
             if not sufijo:
                 cuadrado(pieza, 512).save(SALIDA / "personajes" / f"{nombre}-grande.webp", quality=88)

@@ -95,15 +95,15 @@
 
 .grilla-personajes {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.4rem;
 }
 
 .personaje {
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  padding: 0.35rem;
+  padding: 0.2rem;
   border: 0;
   border-radius: var(--radio);
   background: var(--superficie);
