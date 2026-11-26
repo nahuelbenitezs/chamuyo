@@ -326,7 +326,7 @@
   width: min(1240px, 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: clamp(12px, 2vw, 24px);
   padding: clamp(24px, 4vw, 48px) clamp(16px, 3vw, 40px);
 }
@@ -386,19 +386,14 @@
   rotate: -0.6deg;
 }
 
-/* Con dos columnas, Minijuegos ocupa toda la fila de abajo. */
-@media (max-width: 1100px) {
-  .modos {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .modo.minijuegos {
-    grid-column: 1 / -1;
-  }
-
-  .modo.minijuegos img {
-    width: min(100%, 18rem);
-  }
+/* Garabatos: una hoja de cuaderno. */
+.modo.garabatos {
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 38px, rgb(76 195 255 / 0.28) 38px 40px),
+    #f6f1e7;
+  color: #1b1600;
+  box-shadow: 0 10px 0 #c9bfa9;
+  rotate: 0.6deg;
 }
 
 /* ---- cierre ---- */

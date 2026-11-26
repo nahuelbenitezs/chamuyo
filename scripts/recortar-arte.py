@@ -116,8 +116,13 @@ def minijuegos() -> None:
     """Arte del modo Minijuegos: tarjeta del inicio, íconos de cada juego, empanadas que caen y fondos."""
     carpeta = SALIDA / "minijuegos"
     carpeta.mkdir(exist_ok=True)
-    modo = sin_fondo_blanco(Image.open(ARTE / "modo-minijuegos.webp"), troquel=26)
-    cuadrado(modo.crop(modo.getbbox()), 640).save(SALIDA / "modo-minijuegos.webp", quality=88)
+    # Tarjetas de los modos en el inicio (el del Impostor, cuando esté el original).
+    for nombre in ("modo-minijuegos", "modo-garabatos", "modo-impostor"):
+        original = next((ARTE / f"{nombre}{ext}" for ext in (".webp", ".png") if (ARTE / f"{nombre}{ext}").exists()), None)
+        if not original:
+            continue
+        modo = sin_fondo_blanco(Image.open(original), troquel=26)
+        cuadrado(modo.crop(modo.getbbox()), 640).save(SALIDA / f"{nombre}.webp", quality=88)
     iconos = recortes(sin_fondo_blanco(Image.open(ARTE / "iconos-minijuegos.webp")), columnas=2, filas=2)
     for nombre, pieza in zip(["mate", "ahora", "empanadas", "patio"], iconos):
         cuadrado(pieza, 360).save(carpeta / f"{nombre}.webp", quality=88)
