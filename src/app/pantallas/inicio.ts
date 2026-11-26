@@ -1,6 +1,7 @@
 import { Component, computed, effect, OnDestroy, OnInit, output, signal } from '@angular/core';
 import { cargarContenido } from '../contenido/cargar';
 import { cambiarIdioma, idioma, t } from '../i18n';
+import { contar } from '../juego/analitica';
 import { Dato, mezclar } from '../juego/motor';
 import { imagen, PERSONAJES, partesConsigna } from '../juego/personajes';
 
@@ -27,9 +28,16 @@ export class PantallaInicio implements OnInit, OnDestroy {
     this.soltar = setTimeout(() => this.tocado.set(null), 1400);
   }
 
-  /** Muestra de juego que va rotando en la portada: un dato real con su verdad y dos mentiras. */
+  /** En un celular el juego se usa de control: lo principal es entrar con un código o mandar el link a la tele. */
+  protected readonly esCelu = matchMedia('(pointer: coarse) and (max-width: 820px)').matches;
+  protected copiado = signal(false);
+
+  /** Muestra de juego en la portada: va rotando sola hasta que alguien la juega. */
   protected indice = signal(0);
   protected revelado = signal(false);
+  protected elegida = signal<string | null>(null);
+  protected racha = signal(0);
+  protected jugadas = signal(0);
   private timer: ReturnType<typeof setInterval> | null = null;
   private tick = 0;
 
@@ -65,7 +73,56 @@ export class PantallaInicio implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.detenerRotacion();
+  }
+
+  private detenerRotacion(): void {
     if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+  }
+
+  protected elegir(opcion: string): void {
+    const m = this.muestra();
+    if (!m || this.elegida()) return;
+    if (this.timer) {
+      // Primera jugada: deja de rotar sola y se cuenta (una vez por visita). Si justo se estaba
+      // mostrando la respuesta, pasa a una pregunta nueva para que la juegue de verdad.
+      this.detenerRotacion();
+      contar('demo/jugo');
+      if (this.revelado()) return this.otra();
+    }
+    this.elegida.set(opcion);
+    this.revelado.set(true);
+    this.jugadas.update((n) => n + 1);
+    this.racha.update((r) => (opcion === m.verdad ? r + 1 : 0));
+  }
+
+  protected otra(): void {
+    this.elegida.set(null);
+    this.revelado.set(false);
+    this.indice.update((i) => i + 1);
+  }
+
+  /** Manda el link con lo que tenga el celular (WhatsApp, mail…); si no se puede, lo copia. */
+  protected async mandarLink(): Promise<void> {
+    const url = `${location.origin}${location.pathname}`;
+    const texto = t().textoMandarLink;
+    contar('inicio/mandar-link');
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Chamuyo', text: texto, url });
+      } catch {
+        /* lo cancelaron */
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${texto} ${url}`);
+      this.copiado.set(true);
+      setTimeout(() => this.copiado.set(false), 2500);
+    } catch {
+      /* sin portapapeles */
+    }
   }
 
   protected idiomaContrario(): void {

@@ -20,9 +20,23 @@
       <p class="sublema">{{ t().sublema }}</p>
       <p class="bajada">{{ t().bajada }}</p>
       <div class="ctas">
-        <button class="boton grande" type="button" data-foco-inicial (click)="crear.emit()"><i class="ph-bold ph-television-simple"></i> {{ t().crearSala }}</button>
-        <button class="boton secundario grande" type="button" (click)="unirse.emit()"><i class="ph-bold ph-device-mobile"></i> {{ t().tengoCodigo }}</button>
+        @if (esCelu) {
+          <button class="boton grande" type="button" (click)="unirse.emit()"><i class="ph-bold ph-device-mobile"></i> {{ t().tengoCodigo }}</button>
+          <button class="boton secundario grande" type="button" (click)="mandarLink()">
+            <i class="ph-bold" [class.ph-share-network]="!copiado()" [class.ph-check]="copiado()"></i> {{ copiado() ? t().linkCopiado : t().mandarLink }}
+          </button>
+        } @else {
+          <button class="boton grande" type="button" data-foco-inicial (click)="crear.emit()"><i class="ph-bold ph-television-simple"></i> {{ t().crearSala }}</button>
+          <button class="boton secundario grande" type="button" (click)="unirse.emit()"><i class="ph-bold ph-device-mobile"></i> {{ t().tengoCodigo }}</button>
+        }
       </div>
+      @if (esCelu) {
+        <p class="sin-tele">
+          {{ t().celuSinTele }}
+          <button class="enlace" type="button" (click)="crear.emit()">{{ t().crearEnCelu }}</button>
+          {{ t().celuEnElMedio }}
+        </p>
+      }
     </div>
   </section>
 
@@ -35,7 +49,15 @@
         <li><i class="ph-bold ph-mask-happy"></i><p>{{ t().paso3 }}</p></li>
       </ol>
     </div>
-    <figure class="muestra" aria-hidden="true">
+    <figure class="muestra">
+      <figcaption class="muestra-cabeza">
+        <span class="titular">{{ t().probaUna }}</span>
+        @if (jugadas()) {
+          <span class="racha">{{ t().racha(racha()) }}</span>
+        } @else {
+          <span class="ayuda">{{ t().probaUnaAyuda }}</span>
+        }
+      </figcaption>
       @if (muestra(); as m) {
         <p class="consigna">
           @for (parte of partes(m.texto); track $index) {
@@ -48,9 +70,31 @@
         </p>
         <ul class="opciones">
           @for (o of m.opciones; track o + indice()) {
-            <li [class.verdad]="revelado() && o === m.verdad" [class.apagada]="revelado() && o !== m.verdad">{{ o }}</li>
+            <li>
+              <button type="button" class="opcion" (click)="elegir(o)" [disabled]="!!elegida()"
+                [class.verdad]="revelado() && o === m.verdad" [class.mentira]="elegida() === o && o !== m.verdad"
+                [class.apagada]="revelado() && o !== m.verdad && elegida() !== o">
+                {{ o }}
+              </button>
+            </li>
           }
         </ul>
+        @if (elegida(); as e) {
+          <div class="veredicto" aria-live="polite">
+            <p class="titular" [class.bien]="e === m.verdad">{{ e === m.verdad ? t().acertaste : t().teChamuyaron }}</p>
+            <button class="boton" type="button" (click)="otra()">{{ t().otra }} <i class="ph-bold ph-arrow-right"></i></button>
+          </div>
+          @if (jugadas() >= 3) {
+            <p class="demo-cta">
+              {{ t().demoCta }}
+              @if (esCelu) {
+                <button class="enlace" type="button" (click)="mandarLink()">{{ copiado() ? t().linkCopiado : t().mandarLink }}</button>
+              } @else {
+                <button class="enlace" type="button" (click)="crear.emit()">{{ t().crearSala }}</button>
+              }
+            </p>
+          }
+        }
       }
     </figure>
   </section>

@@ -12,6 +12,8 @@
   position: relative;
   min-height: min(100dvh, 58vw);
   display: grid;
+  /* Una sola columna que nunca pasa el ancho de la pantalla (en celular la imagen la estiraba). */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   padding: 0 clamp(16px, 3vw, 48px);
   isolation: isolate;
@@ -211,13 +213,31 @@
 }
 
 .opciones li {
+  animation: entrar 0.45s var(--ease) both;
+}
+
+.opcion {
+  width: 100%;
   padding: 0.85rem 1.1rem;
+  border: 0;
   border-radius: var(--radio);
   background: var(--superficie-2);
+  color: var(--texto);
+  font: inherit;
   font-size: 1.2rem;
   font-weight: 800;
-  animation: entrar 0.45s var(--ease) both;
-  transition: background-color 0.4s, color 0.4s, opacity 0.4s;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.4s, color 0.4s, opacity 0.4s, translate 0.15s;
+}
+
+.opcion:hover:not(:disabled) {
+  translate: 0 -2px;
+  box-shadow: inset 0 0 0 2px var(--acento);
+}
+
+.opcion:disabled {
+  cursor: default;
 }
 
 .opciones li:nth-child(2) {
@@ -228,13 +248,80 @@
   animation-delay: 0.16s;
 }
 
-.opciones li.verdad {
+.opcion.verdad {
   background: var(--verdad);
   color: #062614;
 }
 
-.opciones li.apagada {
+.opcion.mentira {
+  background: var(--mentira);
+  color: #2a0703;
+}
+
+.opcion.apagada {
   opacity: 0.4;
+}
+
+.muestra-cabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.muestra-cabeza .titular {
+  font-size: 1.6rem;
+  color: var(--acento);
+}
+
+.muestra-cabeza .ayuda,
+.muestra-cabeza .racha {
+  font-weight: 800;
+  color: var(--tenue);
+}
+
+.veredicto {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  animation: entrar 0.4s var(--ease) both;
+}
+
+.veredicto p {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--mentira);
+}
+
+.veredicto p.bien {
+  color: var(--verdad);
+}
+
+.demo-cta {
+  margin: 1rem 0 0;
+  color: var(--tenue);
+}
+
+/* Botón con aspecto de link, para acciones dentro de un texto. */
+.enlace {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--acento);
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.sin-tele {
+  margin: 1rem 0 0;
+  color: var(--tenue);
+  animation: entrar 0.7s var(--ease) 0.3s both;
 }
 
 /* ---- elenco: tocar un personaje muestra su cara de enganado ---- */
