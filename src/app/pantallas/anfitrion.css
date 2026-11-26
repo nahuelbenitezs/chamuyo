@@ -492,7 +492,9 @@
   box-shadow: 0 0 0 2px var(--borde), 0 24px 60px rgb(0 0 0 / 0.45);
 }
 
+/* El lienzo va arriba de la escena 3D (que se agrega por código), con fondo transparente en ese juego. */
 .lienzo-marco canvas {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;

@@ -31,7 +31,8 @@ import {
 import { colorDe, imagen, partesConsigna } from '../juego/personajes';
 import { contar } from '../juego/analitica';
 import { dibujar, Recursos } from '../minijuegos/dibujo';
-import { crear, Entrada, EstadoMinijuego, paso as pasoMinijuego, puestos } from '../minijuegos/juegos';
+import { crear, Entrada, EstadoMinijuego, paso as pasoMinijuego, puestos, vivos } from '../minijuegos/juegos';
+import type { EscenaAgua } from '../minijuegos/agua3d';
 import { EtapaMinijuego, idJefe, MsgJugador, resumen, vistaPara } from '../juego/protocolo';
 import { compartirTarjeta } from '../juego/tarjeta';
 import { Anfitrion } from '../juego/red';
@@ -70,6 +71,10 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   protected etapaMinijuego = signal<EtapaMinijuego>('intro');
   protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'minijuegos'];
   private lienzo = viewChild<ElementRef<HTMLCanvasElement>>('lienzo');
+  private marco = viewChild<ElementRef<HTMLElement>>('marco');
+  /** Escena 3D de Al agua; three.js se baja recién cuando toca ese juego. */
+  private escena3d: EscenaAgua | null = null;
+  private modulo3d: Promise<typeof import('../minijuegos/agua3d')> | null = null;
   private estadoMj: EstadoMinijuego | null = null;
   private entradas: Record<string, Entrada> = {};
   private cuadro: number | null = null;
@@ -100,7 +105,23 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
       get afuera() {
         return t().afuera;
       },
+      get boom() {
+        return t().boom;
+      },
+      get contaEnTuCabeza() {
+        return t().contaEnTuCabeza;
+      },
+      get tocaALos() {
+        return t().tocaALos;
+      },
+      get sinTocar() {
+        return t().sinTocar;
+      },
+      get quedan() {
+        return t().quedan;
+      },
     },
+    capa3d: false,
   };
 
   private red = new Anfitrion({
@@ -391,6 +412,8 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     this.fin.set(0);
     this.etapaMinijuego.set('intro');
     this.estadoMj = null;
+    // Para Al agua, three.js se va bajando mientras dura la presentación.
+    if (this.partida().ronda?.minijuego === 'agua') this.modulo3d ??= import('../minijuegos/agua3d');
     sfx.fase();
     this.difundir();
     this.programar(() => this.comenzarMinijuego(), 4500);
@@ -402,6 +425,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     const ids = this.jugadores().filter((j) => j.conectado).map((j) => j.id);
     this.estadoMj = crear(r.minijuego, ids, Math.random);
     this.entradas = {};
+    if (r.minijuego === 'agua') void this.montar3d(ids);
     this.etapaMinijuego.set('jugando');
     sfx.fase();
     this.difundir();
@@ -412,14 +436,26 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   private avanzarCuadro(ahora: number): void {
     const e = this.estadoMj;
     if (!e) return;
-    const dt = Math.min(0.05, (ahora - this.ultimoCuadro) / 1000);
+    // El juego sigue el tiempo real aunque la pantalla dibuje pocos cuadros: si pasó mucho desde
+    // el último, se avanza en pasos cortos (y como mucho un segundo, por si la pestaña
+    // estuvo en segundo plano).
+    let falta = Math.min(1, Math.max(0, (ahora - this.ultimoCuadro) / 1000));
     this.ultimoCuadro = ahora;
     const antes = e.id === 'ahora' ? e.etapa : null;
-    const vivosAntes = e.id === 'empanadas' ? e.ids.filter((id) => e.eliminado[id] === null).length : 0;
-    pasoMinijuego(e, dt, this.entradas, Math.random);
-    for (const entrada of Object.values(this.entradas)) entrada.toques = 0;
+    const revelabaDiez = e.id === 'diez' && e.revelarDesde !== null;
+    const vivosAntes = vivos(e);
+    do {
+      const dt = Math.min(1 / 30, falta);
+      pasoMinijuego(e, dt, this.entradas, Math.random);
+      // Los toques cuentan una sola vez.
+      for (const entrada of Object.values(this.entradas)) entrada.toques = 0;
+      falta -= dt;
+    } while (falta > 0 && !e.fin);
     if (e.id === 'ahora' && antes !== e.etapa && e.etapa === 'ya') sfx.verdad();
-    if (e.id === 'empanadas' && e.ids.filter((id) => e.eliminado[id] === null).length < vivosAntes) sfx.revela();
+    if (e.id === 'diez' && !revelabaDiez && e.revelarDesde !== null) sfx.verdad();
+    // Alguien quedó afuera (empanada, agua, papa o choque).
+    if (vivosAntes !== null && (vivos(e) ?? 0) < vivosAntes) sfx.revela();
+    if (e.id === 'agua') this.escena3d?.dibujar(e);
     const ctx = this.lienzo()?.nativeElement.getContext('2d');
     if (ctx) dibujar(ctx, e, this.recursos);
     if (e.fin) this.terminarMinijuego();
@@ -440,6 +476,26 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   private detenerCuadros(): void {
     if (this.cuadro !== null) cancelAnimationFrame(this.cuadro);
     this.cuadro = null;
+    this.escena3d?.destruir();
+    this.escena3d = null;
+    this.recursos.capa3d = false;
+  }
+
+  /** Arma la pileta en 3D detrás del lienzo. Sin WebGL, el juego sigue en la versión plana. */
+  private async montar3d(ids: string[]): Promise<void> {
+    try {
+      const { EscenaAgua } = await (this.modulo3d ??= import('../minijuegos/agua3d'));
+      const marco = this.marco()?.nativeElement;
+      if (!marco || this.estadoMj?.id !== 'agua' || this.estadoMj.fin || this.escena3d) return;
+      this.escena3d = new EscenaAgua(marco, ids, {
+        url: (id) => imagen(this.avatarDe(id)),
+        color: (id) => colorDe(this.avatarDe(id)),
+      });
+      this.recursos.capa3d = true;
+    } catch {
+      this.escena3d = null;
+      this.recursos.capa3d = false;
+    }
   }
 
   private entrada(id: string): Entrada {

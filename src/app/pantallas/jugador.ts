@@ -72,6 +72,8 @@ export class PantallaJugador implements OnInit, OnDestroy {
   protected opinion = signal<number | null>(null);
   /** Posición del joystick de los minijuegos, entre -1 y 1. */
   protected palanca = signal({ x: 0, y: 0 });
+  /** En Contá hasta diez vale un solo toque: después el botón queda en "¡Tocaste!". */
+  protected tocado = signal(false);
   protected readonly caritas = [
     { valor: 1, emoji: '😴' },
     { valor: 2, emoji: '😐' },
@@ -103,6 +105,7 @@ export class PantallaJugador implements OnInit, OnDestroy {
       if (v.v === 'escribir' || v.v === 'votar' || clave === 'control-intro') navigator.vibrate?.(60);
       if (clave === 'control-jugando') navigator.vibrate?.([40, 60, 40]);
       if (clave !== 'control-jugando') untracked(() => this.soltarPalanca(false));
+      untracked(() => this.tocado.set(false));
     });
   }
 
@@ -188,6 +191,11 @@ export class PantallaJugador implements OnInit, OnDestroy {
 
   protected tocar(ev: PointerEvent): void {
     ev.preventDefault();
+    const v = this.vista();
+    if (v?.v === 'control' && v.juego === 'diez') {
+      if (this.tocado()) return;
+      this.tocado.set(true);
+    }
     this.cliente?.enviar({ t: 'toque' });
     navigator.vibrate?.(12);
   }

@@ -169,11 +169,12 @@
                 <span class="chip dobles">{{ t().puntosDobles }}</span>
               }
             </div>
-            <div class="lienzo-marco">
+            <div class="lienzo-marco" #marco>
               <canvas #lienzo width="1280" height="720" [attr.aria-label]="t().juegos[r.minijuego!].nombre"></canvas>
               @if (etapaMinijuego() === 'intro') {
                 <div class="intro-minijuego">
-                  <img class="intro-icono" [src]="'arte/minijuegos/' + r.minijuego + '.webp'" alt="" width="360" height="360" />
+                  <img class="intro-icono" [src]="'arte/minijuegos/' + r.minijuego + '.webp'" alt="" width="360" height="360"
+                    (error)="$any($event.target).hidden = true" />
                   <h1 class="titular intro-nombre">{{ t().juegos[r.minijuego!].nombre }}</h1>
                   <p class="intro-como">{{ t().juegos[r.minijuego!].como }}</p>
                   <p class="cuenta titular" aria-hidden="true">
