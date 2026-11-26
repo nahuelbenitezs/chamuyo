@@ -1,4 +1,5 @@
 import { Contenido } from '../juego/motor';
+import { dibujosEn } from './garabatos';
 import { secretasEn } from './impostor';
 
 export const contenidoEn: Contenido = {
@@ -254,4 +255,5 @@ export const contenidoEn: Contenido = {
     "What the tag on grandma's sweater says",
   ],
   secretas: secretasEn,
+  dibujos: dibujosEn,
 };

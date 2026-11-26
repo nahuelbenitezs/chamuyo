@@ -477,6 +477,49 @@
   color: #062614;
 }
 
+/* ---- garabatos ---- */
+
+.garabato-escena {
+  display: grid;
+  grid-template-columns: minmax(0, min(58vh, 46vw)) 1fr;
+  align-items: center;
+  gap: clamp(1.5rem, 3vw, 3rem);
+}
+
+.garabato-texto {
+  display: grid;
+  gap: 0.8rem;
+  align-content: center;
+}
+
+.garabato-texto p {
+  margin: 0;
+}
+
+.artista {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: clamp(1.4rem, 2.4vw, 2.2rem);
+  font-weight: 800;
+}
+
+.artista .avatar {
+  width: 3.6rem;
+  height: 3.6rem;
+}
+
+.garabato-chico {
+  justify-self: center;
+  width: min(30vh, 18rem);
+}
+
+@media (max-width: 900px) {
+  .garabato-escena {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---- impostor ---- */
 
 .categoria-etiqueta {

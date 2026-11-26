@@ -2,6 +2,7 @@ import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, vie
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import QRCode from 'qrcode';
 import { cargarContenido } from '../contenido/cargar';
+import { Garabato } from '../juego/garabato';
 import { cambiarIdioma, idioma, t } from '../i18n';
 import {
   agregarJugador,
@@ -14,6 +15,11 @@ import {
   MAX_JUGADORES,
   MIN_JUGADORES,
   minimoPara,
+  cerrarDibujos,
+  faltanDibujar,
+  guardarDibujo,
+  Ronda,
+  Trazo,
   VUELTAS_IMPOSTOR,
   Modo,
   nuevaPartida,
@@ -40,12 +46,13 @@ import { Anfitrion } from '../juego/red';
 import { alternarSonido, sfx, sonidoActivo } from '../juego/sonido';
 
 const SEG = 1000;
-const TIEMPO = { chamuyo: 75 * SEG, ocurrencias: 60 * SEG, impostor: 45 * SEG, votar: 35 * SEG, paso: 3400, tabla: 7000 };
+const TIEMPO = { chamuyo: 75 * SEG, ocurrencias: 60 * SEG, impostor: 45 * SEG, garabato: 50 * SEG, dibujar: 90 * SEG, votar: 35 * SEG, paso: 3400, tabla: 7000 };
 
 @Component({
   selector: 'app-anfitrion',
   templateUrl: './anfitrion.html',
   styleUrl: './anfitrion.css',
+  imports: [Garabato],
 })
 export class PantallaAnfitrion implements OnInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
@@ -73,7 +80,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   protected copiado = signal(false);
   protected compartiendo = signal(false);
   protected etapaMinijuego = signal<EtapaMinijuego>('intro');
-  protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'impostor', 'minijuegos'];
+  protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'impostor', 'garabatos', 'minijuegos'];
   private lienzo = viewChild<ElementRef<HTMLCanvasElement>>('lienzo');
   private marco = viewChild<ElementRef<HTMLElement>>('marco');
   /** Escena 3D de Al agua; three.js se baja recién cuando toca ese juego. */
@@ -156,6 +163,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   );
   protected listos = computed(() => {
     const p = this.partida();
+    if (p.fase === 'dibujar') return new Set(p.dibujosListos);
     if (p.fase === 'escribir') return new Set(p.jugadores.map((j) => j.id).filter((id) => !faltanResponder(p).includes(id)));
     if (p.fase === 'votar') {
       const pueden = puedenVotar(p);
@@ -184,7 +192,14 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
 
   protected nombreModo(m: Modo): string {
     const x = t();
-    return { mixto: x.modoMixto, chamuyo: x.modoChamuyo, ocurrencias: x.modoOcurrencias, minijuegos: x.modoMinijuegos, impostor: x.modoImpostor }[m];
+    return {
+      mixto: x.modoMixto,
+      chamuyo: x.modoChamuyo,
+      ocurrencias: x.modoOcurrencias,
+      minijuegos: x.modoMinijuegos,
+      impostor: x.modoImpostor,
+      garabatos: x.modoGarabatos,
+    }[m];
   }
 
   protected descModo(m: Modo): string {
@@ -195,6 +210,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
       ocurrencias: x.modoOcurrenciasDesc,
       minijuegos: x.modoMinijuegosDesc,
       impostor: x.modoImpostorDesc,
+      garabatos: x.modoGarabatosDesc,
     }[m];
   }
 
@@ -269,9 +285,11 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     const usados = leerUsados();
     const nueva = iniciar(p, modo, this.rondas(), contenido, Math.random, usados);
     guardarUsados([...usados, ...nueva.plan.filter((x) => x.tipo !== 'minijuego').map(claveDe)]);
+    if (nueva.fase === 'lobby') return;
     this.partida.set(nueva);
     contar(`partida-empezada/${modo}`);
-    this.entrarEscribir();
+    if (nueva.fase === 'dibujar') this.entrarDibujar();
+    else this.entrarEscribir();
   }
 
   protected async compartir(): Promise<void> {
@@ -328,6 +346,13 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
         sfx.listo();
         if (!faltanResponder(this.partida()).length) this.programar(() => this.cerrarEscritura(), 700);
         break;
+      case 'dibujo':
+        this.partida.set(guardarDibujo(p, id, msg.trazos, !!msg.listo));
+        if (msg.listo) sfx.listo();
+        if (this.partida().fase === 'dibujar' && !faltanDibujar(this.partida()).length) this.programar(() => this.cerrarDibujo(), 900);
+        // Solo hace falta avisarle a los celulares cuando alguien termina.
+        if (!msg.listo) return;
+        break;
       case 'votar':
         this.partida.set(votar(p, id, msg.opcion));
         sfx.listo();
@@ -374,10 +399,36 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     if (!r) return this.terminar();
     if (r.tipo === 'minijuego') return this.entrarMinijuego();
     this.paso.set(-1);
-    this.fin.set(Date.now() + (r.tipo === 'chamuyo' ? TIEMPO.chamuyo : r.tipo === 'impostor' ? TIEMPO.impostor : TIEMPO.ocurrencias));
+    this.fin.set(Date.now() + (r.tipo === 'chamuyo' ? TIEMPO.chamuyo : r.tipo === 'impostor' ? TIEMPO.impostor : r.tipo === 'garabato' ? TIEMPO.garabato : TIEMPO.ocurrencias));
     this.programar(() => this.cerrarEscritura(), this.restante());
     sfx.fase();
     this.difundir();
+  }
+
+  // ---- garabatos ----
+
+  private entrarDibujar(): void {
+    this.paso.set(-1);
+    this.fin.set(Date.now() + TIEMPO.dibujar);
+    this.programar(() => this.cerrarDibujo(), TIEMPO.dibujar);
+    sfx.fase();
+    this.difundir();
+  }
+
+  private cerrarDibujo(): void {
+    if (this.partida().fase !== 'dibujar') return;
+    this.partida.update((p) => cerrarDibujos(p, Math.random));
+    if (this.partida().fase === 'final') return this.terminar();
+    this.entrarEscribir();
+  }
+
+  protected dibujoDe(id: string | null): Trazo[] {
+    return id ? (this.partida().dibujos[id] ?? []) : [];
+  }
+
+  /** En Chamuyo y en Garabatos hay una opción verdadera y las demás son mentiras. */
+  protected esChamuyo(r: Ronda): boolean {
+    return r.tipo === 'chamuyo' || r.tipo === 'garabato';
   }
 
   private cerrarEscritura(): void {

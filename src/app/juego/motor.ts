@@ -2,9 +2,9 @@
 // los celulares solo reciben la vista que les corresponde.
 import { IdMinijuego, MINIJUEGOS } from '../minijuegos/juegos';
 
-export type Modo = 'chamuyo' | 'ocurrencias' | 'mixto' | 'minijuegos' | 'impostor';
-export type TipoRonda = 'chamuyo' | 'ocurrencias' | 'minijuego' | 'impostor';
-export type Fase = 'lobby' | 'escribir' | 'votar' | 'minijuego' | 'revelar' | 'tabla' | 'final';
+export type Modo = 'chamuyo' | 'ocurrencias' | 'mixto' | 'minijuegos' | 'impostor' | 'garabatos';
+export type TipoRonda = 'chamuyo' | 'ocurrencias' | 'minijuego' | 'impostor' | 'garabato';
+export type Fase = 'lobby' | 'dibujar' | 'escribir' | 'votar' | 'minijuego' | 'revelar' | 'tabla' | 'final';
 
 export interface Jugador {
   id: string;
@@ -20,6 +20,19 @@ export interface Dato {
   verdad: string;
   senuelos: string[];
 }
+
+/** Un trazo de un garabato: coordenadas en un lienzo de 1000×1000, aplanadas (x, y, x, y…). */
+export interface Trazo {
+  color: string;
+  grosor: number;
+  puntos: number[];
+}
+
+/** Colores que se pueden usar para dibujar; el último es el del papel (sirve de goma). */
+export const PALETA = ['#1b1600', '#ff6b5b', '#ff8a3d', '#ffd23f', '#3ddc84', '#4cc3ff', '#b98cff', '#f6f1e7'] as const;
+export const GROSORES = [8, 22, 60] as const;
+/** Tope de puntos por dibujo, para que los mensajes no crezcan sin límite. */
+export const MAX_PUNTOS_DIBUJO = 8000;
 
 /** Una palabra secreta para el Impostor, con la categoría que sí conoce el impostor. */
 export interface Secreta {
@@ -60,12 +73,16 @@ export interface Ronda {
   pistas: Record<string, string[]>;
   /** Si al impostor lo votó la mayoría (null mientras no se votó). */
   descubierto: boolean | null;
+  /** Solo en Garabatos: de quién es el dibujo que se está adivinando. */
+  artista: string | null;
 }
 
 export interface Contenido {
   datos: Dato[];
   consignas: string[];
   secretas?: Secreta[];
+  /** Cosas para dibujar en Garabatos. */
+  dibujos?: string[];
 }
 
 export interface Partida {
@@ -74,7 +91,11 @@ export interface Partida {
   jugadores: Jugador[];
   totalRondas: number;
   ronda: Ronda | null;
-  plan: Array<{ tipo: TipoRonda; dato?: Dato; consigna?: string; minijuego?: IdMinijuego; secreta?: Secreta }>;
+  plan: Array<{ tipo: TipoRonda; dato?: Dato; consigna?: string; minijuego?: IdMinijuego; secreta?: Secreta; artista?: string }>;
+  /** Garabatos: qué tiene que dibujar cada uno, lo que dibujó y quiénes ya terminaron. */
+  encargos: Record<string, string>;
+  dibujos: Record<string, Trazo[]>;
+  dibujosListos: string[];
   /** La respuesta más votada de la partida: la mentira que más engañó o la ocurrencia que más gustó. */
   destacado: Destacado | null;
 }
@@ -90,7 +111,7 @@ export interface Destacado {
 export const MAX_JUGADORES = 8;
 export const MIN_JUGADORES = 2;
 export const MAX_LARGO = 60;
-export const PUNTOS = { verdad: 1000, engano: 500, voto: 500, unanime: 1000, descubrir: 1000, despistar: 500, escapar: 1000 } as const;
+export const PUNTOS = { verdad: 1000, engano: 500, voto: 500, unanime: 1000, descubrir: 1000, despistar: 500, escapar: 1000, dibujo: 500 } as const;
 /** El Impostor necesita al menos tres: con dos, el que no es impostor ya sabe quién es. */
 export const MIN_IMPOSTOR = 3;
 export const VUELTAS_IMPOSTOR = 2;
@@ -123,7 +144,7 @@ export function limpiarTexto(texto: string): string {
 }
 
 export function nuevaPartida(): Partida {
-  return { fase: 'lobby', modo: 'mixto', jugadores: [], totalRondas: 0, ronda: null, plan: [], destacado: null };
+  return { fase: 'lobby', modo: 'mixto', jugadores: [], totalRondas: 0, ronda: null, plan: [], destacado: null, encargos: {}, dibujos: {}, dibujosListos: [] };
 }
 
 export function agregarJugador(p: Partida, j: Omit<Jugador, 'puntos' | 'conectado'>): Partida {
@@ -149,8 +170,9 @@ export function quitarJugador(p: Partida, id: string): Partida {
 }
 
 /** Clave estable de un contenido, para recordar qué ya salió en partidas anteriores. */
-export function claveDe(paso: { dato?: Dato; consigna?: string; secreta?: Secreta }): string {
+export function claveDe(paso: { dato?: Dato; consigna?: string; secreta?: Secreta; artista?: string }): string {
   if (paso.secreta) return 'p:' + normalizar(paso.secreta.palabra);
+  if (paso.artista && paso.dato) return 'g:' + normalizar(paso.dato.verdad);
   return paso.dato ? 'd:' + normalizar(paso.dato.texto) : 'c:' + normalizar(paso.consigna ?? '');
 }
 
@@ -182,8 +204,9 @@ export function iniciar(
   const conImpostor = p.jugadores.length >= MIN_IMPOSTOR && secretas.length > 0;
   const ciclo: TipoRonda[] = conImpostor ? ['chamuyo', 'ocurrencias', 'impostor', 'minijuego'] : ['chamuyo', 'ocurrencias', 'minijuego'];
   let siguienteMinijuego = 0;
-  for (let i = 0; i < rondas; i++) {
-    const tipo: TipoRonda = modo === 'mixto' ? ciclo[i % ciclo.length] : modo === 'minijuegos' ? 'minijuego' : modo;
+  // Garabatos arma sus rondas aparte, cuando todos terminan de dibujar.
+  for (let i = 0; i < rondas && modo !== 'garabatos'; i++) {
+    const tipo: TipoRonda = modo === 'mixto' ? ciclo[i % ciclo.length] : modo === 'minijuegos' ? 'minijuego' : (modo as TipoRonda);
     if (tipo === 'minijuego') plan.push({ tipo, minijuego: minijuegos[siguienteMinijuego++ % minijuegos.length] });
     else if (tipo === 'impostor' && secretas.length) plan.push({ tipo, secreta: secretas.pop() });
     else if (tipo === 'chamuyo' && datos.length) plan.push({ tipo, dato: datos.pop() });
@@ -197,8 +220,71 @@ export function iniciar(
     jugadores: p.jugadores.map((j) => ({ ...j, puntos: 0 })),
     ronda: null,
     destacado: null,
+    encargos: {},
+    dibujos: {},
+    dibujosListos: [],
   };
+  if (modo === 'garabatos') return empezarGarabatos(base, contenido, azar, usados);
   return empezarRonda(base, 0, azar);
+}
+
+/** Garabatos: a cada uno le toca algo distinto para dibujar; las rondas se arman cuando terminan. */
+function empezarGarabatos(p: Partida, contenido: Contenido, azar: Azar, usados: ReadonlySet<string>): Partida {
+  const pozo = priorizarNuevos(contenido.dibujos ?? [], (d) => 'g:' + normalizar(d), usados, azar);
+  if (pozo.length < p.jugadores.length) return { ...p, fase: 'lobby' };
+  const encargos: Record<string, string> = {};
+  for (const j of p.jugadores) encargos[j.id] = pozo.pop()!;
+  // Señuelos para cada dibujo: otras cosas que nadie dibujó, por si hay pocos títulos inventados.
+  const resto = mezclar(pozo, azar);
+  const plan: Partida['plan'] = p.jugadores.map((j, i) => ({
+    tipo: 'garabato',
+    artista: j.id,
+    dato: { texto: '', verdad: encargos[j.id], senuelos: resto.slice(i * 3, i * 3 + 3) },
+  }));
+  return { ...p, fase: 'dibujar', plan, totalRondas: plan.length, encargos, dibujos: {}, dibujosListos: [] };
+}
+
+/** Limpia lo que manda un celular: solo colores y grosores conocidos, coordenadas dentro del lienzo. */
+function limpiarTrazos(trazos: unknown): Trazo[] {
+  if (!Array.isArray(trazos)) return [];
+  const limpios: Trazo[] = [];
+  let total = 0;
+  for (const t of trazos.slice(0, 600)) {
+    if (!t || typeof t !== 'object') continue;
+    const { color, grosor, puntos } = t as Partial<Trazo>;
+    if (!PALETA.includes(color as (typeof PALETA)[number]) || !GROSORES.includes(grosor as (typeof GROSORES)[number])) continue;
+    if (!Array.isArray(puntos) || puntos.length < 2) continue;
+    const pares = puntos.slice(0, (puntos.length >> 1) << 1).map((n) => Math.max(0, Math.min(1000, Math.round(Number(n) || 0))));
+    if (total + pares.length > MAX_PUNTOS_DIBUJO * 2) break;
+    total += pares.length;
+    limpios.push({ color: color!, grosor: grosor!, puntos: pares });
+  }
+  return limpios;
+}
+
+export function guardarDibujo(p: Partida, id: string, trazos: unknown, listo: boolean): Partida {
+  if (p.fase !== 'dibujar' || !(id in p.encargos) || p.dibujosListos.includes(id)) return p;
+  const limpio = limpiarTrazos(trazos);
+  return {
+    ...p,
+    dibujos: { ...p.dibujos, [id]: limpio },
+    dibujosListos: listo && limpio.length ? [...p.dibujosListos, id] : p.dibujosListos,
+  };
+}
+
+export function faltanDibujar(p: Partida): string[] {
+  return p.jugadores.filter((j) => j.conectado && j.id in p.encargos && !p.dibujosListos.includes(j.id)).map((j) => j.id);
+}
+
+/** Termina el tiempo de dibujar: se adivina un dibujo por ronda, salteando los que quedaron vacíos. */
+export function cerrarDibujos(p: Partida, azar: Azar): Partida {
+  if (p.fase !== 'dibujar') return p;
+  const plan = mezclar(
+    p.plan.filter((x) => (p.dibujos[x.artista ?? '']?.length ?? 0) > 0),
+    azar,
+  );
+  if (!plan.length) return { ...p, fase: 'final', plan, totalRondas: 0, ronda: null };
+  return empezarRonda({ ...p, plan, totalRondas: plan.length }, 0, azar);
 }
 
 function empezarRonda(p: Partida, indice: number, azar: Azar): Partida {
@@ -210,7 +296,9 @@ function empezarRonda(p: Partida, indice: number, azar: Azar): Partida {
       ? ''
       : paso.tipo === 'impostor'
         ? paso.secreta!.categoria
-        : paso.tipo === 'chamuyo'
+        : paso.tipo === 'garabato'
+          ? ''
+          : paso.tipo === 'chamuyo'
           ? paso.dato!.texto
           : paso.consigna!.replace(/\{jugador\}/g, () => nombres[Math.floor(azar() * nombres.length)]);
   const candidatos = p.jugadores.filter((j) => j.conectado);
@@ -235,6 +323,7 @@ function empezarRonda(p: Partida, indice: number, azar: Azar): Partida {
     vuelta: 1,
     pistas: {},
     descubierto: null,
+    artista: paso.artista ?? null,
   };
   return { ...p, fase: paso.tipo === 'minijuego' ? 'minijuego' : 'escribir', ronda };
 }
@@ -266,14 +355,14 @@ export function resultadoMinijuego(p: Partida, puestos: string[][]): Partida {
 export function responder(p: Partida, id: string, texto: string): Partida {
   const r = p.ronda;
   const limpio = limpiarTexto(texto);
-  if (p.fase !== 'escribir' || !r || !limpio || !p.jugadores.some((j) => j.id === id)) return p;
+  if (p.fase !== 'escribir' || !r || !limpio || !p.jugadores.some((j) => j.id === id) || id === r.artista) return p;
   return { ...p, ronda: { ...r, respuestas: { ...r.respuestas, [id]: limpio } } };
 }
 
 export function faltanResponder(p: Partida): string[] {
   const r = p.ronda;
   if (!r) return [];
-  return p.jugadores.filter((j) => j.conectado && !(j.id in r.respuestas)).map((j) => j.id);
+  return p.jugadores.filter((j) => j.conectado && j.id !== r.artista && !(j.id in r.respuestas)).map((j) => j.id);
 }
 
 /** Cierra la escritura y arma las opciones que se van a votar. */
@@ -298,7 +387,7 @@ export function cerrarEscritura(p: Partida, azar: Azar): Partida {
   }
 
   const opciones = [...grupos.values()];
-  if (r.tipo === 'chamuyo' && r.verdad) {
+  if ((r.tipo === 'chamuyo' || r.tipo === 'garabato') && r.verdad) {
     for (const senuelo of mezclar(r.senuelos, azar)) {
       if (opciones.length >= 2) break;
       const clave = normalizar(senuelo);
@@ -341,7 +430,7 @@ function cerrarPistas(p: Partida, r: Ronda): Partida {
 /** Opciones que un jugador puede elegir: nunca la propia. */
 export function opcionesPara(p: Partida, id: string): Opcion[] {
   const r = p.ronda;
-  if (!r || r.acertaron.includes(id)) return [];
+  if (!r || r.acertaron.includes(id) || id === r.artista) return [];
   return r.opciones.filter((o) => !o.autores.includes(id));
 }
 
@@ -390,12 +479,15 @@ export function puntuar(p: Partida): Partida {
       else if (r.impostor) sumar(r.impostor, PUNTOS.despistar);
     }
     if (r.impostor && !descubierto) sumar(r.impostor, PUNTOS.escapar);
-  } else if (r.tipo === 'chamuyo') {
+  } else if (r.tipo === 'chamuyo' || r.tipo === 'garabato') {
     for (const id of r.acertaron) sumar(id, PUNTOS.verdad);
     for (const o of opciones) {
       if (o.verdad) o.votantes.forEach((id) => sumar(id, PUNTOS.verdad));
       else o.autores.forEach((id) => sumar(id, PUNTOS.engano * o.votantes.length));
     }
+    // En Garabatos, el que dibujó suma por cada uno que reconoció su dibujo.
+    const reconocieron = r.acertaron.length + (opciones.find((o) => o.verdad)?.votantes.length ?? 0);
+    if (r.tipo === 'garabato' && r.artista) sumar(r.artista, PUNTOS.dibujo * reconocieron);
   } else {
     const votantes = Object.keys(r.votos).length;
     for (const o of opciones) {
@@ -405,7 +497,7 @@ export function puntuar(p: Partida): Partida {
   }
 
   let destacado = p.destacado;
-  for (const o of r.tipo === 'impostor' ? [] : opciones) {
+  for (const o of r.tipo === 'impostor' || r.tipo === 'garabato' ? [] : opciones) {
     if (o.verdad || o.senuelo || !o.autores.length || !o.votantes.length) continue;
     // En empate gana la más reciente, salvo que le quite el lugar a una mentira (es lo más lindo de compartir).
     const empataYEsMejor = destacado && o.votantes.length === destacado.votos && (r.tipo === 'chamuyo' || destacado.tipo !== 'chamuyo');
@@ -427,7 +519,7 @@ export function puntuar(p: Partida): Partida {
 export function puntosPorOpcion(r: Ronda, o: Opcion): number {
   if (o.verdad || !o.autores.length || r.tipo === 'impostor') return 0;
   const mult = r.dobles ? 2 : 1;
-  if (r.tipo === 'chamuyo') return PUNTOS.engano * o.votantes.length * mult;
+  if (r.tipo === 'chamuyo' || r.tipo === 'garabato') return PUNTOS.engano * o.votantes.length * mult;
   const votantes = Object.keys(r.votos).length;
   const unanime = votantes >= 2 && o.votantes.length === votantes ? PUNTOS.unanime : 0;
   return (PUNTOS.voto * o.votantes.length + unanime) * mult;
@@ -440,7 +532,18 @@ export function avanzar(p: Partida, azar: Azar): Partida {
 }
 
 export function volverAlLobby(p: Partida): Partida {
-  return { ...p, fase: 'lobby', ronda: null, plan: [], totalRondas: 0, destacado: null, jugadores: p.jugadores.filter((j) => j.conectado) };
+  return {
+    ...p,
+    fase: 'lobby',
+    ronda: null,
+    plan: [],
+    totalRondas: 0,
+    destacado: null,
+    encargos: {},
+    dibujos: {},
+    dibujosListos: [],
+    jugadores: p.jugadores.filter((j) => j.conectado),
+  };
 }
 
 export function ranking(p: Partida): Jugador[] {

@@ -540,3 +540,85 @@
 .secreto-categoria {
   font-size: 1.2rem;
 }
+
+/* ---- garabatos: la pizarra del celular ---- */
+
+.dibujar {
+  gap: 0.7rem;
+}
+
+.encargo {
+  margin: 0;
+  font-size: 1.9rem;
+  color: var(--acento);
+  text-align: center;
+}
+
+.pizarra {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  background: #f6f1e7;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 0 0 0 3px var(--borde);
+}
+
+.pizarra.bloqueada {
+  opacity: 0.6;
+}
+
+.herramientas {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.colores,
+.grosores {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.color {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 0;
+  border-radius: 50%;
+  color: #131215;
+  box-shadow: inset 0 0 0 2px rgb(0 0 0 / 0.25);
+}
+
+.color[aria-checked='true'] {
+  box-shadow: 0 0 0 3px var(--fondo), 0 0 0 6px var(--acento);
+}
+
+.grosor {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 0;
+  border-radius: 14px;
+  background: var(--superficie);
+}
+
+.grosor span {
+  border-radius: 50%;
+}
+
+.grosor[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px var(--acento);
+}
+
+.mirar-dibujo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--tenue);
+}

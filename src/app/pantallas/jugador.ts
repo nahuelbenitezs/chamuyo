@@ -1,6 +1,7 @@
-import { Component, computed, effect, input, OnDestroy, OnInit, signal, untracked } from '@angular/core';
+import { Component, computed, effect, ElementRef, input, OnDestroy, OnInit, signal, untracked, viewChild } from '@angular/core';
 import { cambiarIdioma, idioma, t } from '../i18n';
-import { MAX_LARGO, Modo } from '../juego/motor';
+import { GROSORES, MAX_LARGO, MAX_PUNTOS_DIBUJO, Modo, PALETA, Trazo } from '../juego/motor';
+import { PAPEL, pintarTrazos } from '../juego/garabato';
 import { colorDe, imagen, nombrePersonaje, personaje, PERSONAJES, partesConsigna } from '../juego/personajes';
 import { contar } from '../juego/analitica';
 import { codigoValido, Resumen, Vista } from '../juego/protocolo';
@@ -57,7 +58,10 @@ export class PantallaJugador implements OnInit, OnDestroy {
   protected readonly partes = partesConsigna;
   protected readonly maxLargo = MAX_LARGO;
   protected readonly colorDe = colorDe;
-  protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'impostor', 'minijuegos'];
+  protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'impostor', 'garabatos', 'minijuegos'];
+  protected readonly paleta = PALETA;
+  protected readonly grosores = GROSORES;
+  protected readonly papel = PAPEL;
 
   protected codigo = signal('');
   protected nombre = signal(leer('chamuyo-nombre'));
@@ -74,6 +78,13 @@ export class PantallaJugador implements OnInit, OnDestroy {
   protected palanca = signal({ x: 0, y: 0 });
   /** En Contá hasta diez vale un solo toque: después el botón queda en "¡Tocaste!". */
   protected tocado = signal(false);
+  /** Garabatos: el dibujo que se está haciendo en este celular. */
+  protected trazos = signal<Trazo[]>([]);
+  protected color = signal<string>(PALETA[0]);
+  protected grosor = signal<number>(GROSORES[1]);
+  private pizarra = viewChild<ElementRef<HTMLCanvasElement>>('pizarra');
+  private trazoActual: Trazo | null = null;
+  private encargo = '';
   protected readonly caritas = [
     { valor: 1, emoji: '😴' },
     { valor: 2, emoji: '😐' },
@@ -96,6 +107,11 @@ export class PantallaJugador implements OnInit, OnDestroy {
   private pendiente: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
+    // La pizarra se repinta entera cuando cambia el dibujo (deshacer, borrar o al aparecer).
+    effect(() => {
+      const ctx = this.pizarra()?.nativeElement.getContext('2d');
+      if (ctx) pintarTrazos(ctx, this.trazos());
+    });
     // Vibra cuando cambia lo que hay que hacer, para que nadie se quede mirando la tele sin responder.
     effect(() => {
       const v = this.vista();
@@ -184,7 +200,14 @@ export class PantallaJugador implements OnInit, OnDestroy {
 
   protected nombreModo(m: Modo): string {
     const x = t();
-    return { mixto: x.modoMixto, chamuyo: x.modoChamuyo, ocurrencias: x.modoOcurrencias, minijuegos: x.modoMinijuegos, impostor: x.modoImpostor }[m];
+    return {
+      mixto: x.modoMixto,
+      chamuyo: x.modoChamuyo,
+      ocurrencias: x.modoOcurrencias,
+      minijuegos: x.modoMinijuegos,
+      impostor: x.modoImpostor,
+      garabatos: x.modoGarabatos,
+    }[m];
   }
 
   // ---- controles de los minijuegos ----
@@ -255,12 +278,93 @@ export class PantallaJugador implements OnInit, OnDestroy {
     this.cliente?.enviar({ t: 'mando', x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 });
   }
 
+  // ---- garabatos ----
+
+  private punto(ev: PointerEvent): { x: number; y: number } {
+    const caja = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(1000, Math.round(((ev.clientX - caja.left) / caja.width) * 1000))),
+      y: Math.max(0, Math.min(1000, Math.round(((ev.clientY - caja.top) / caja.height) * 1000))),
+    };
+  }
+
+  private puntosUsados(): number {
+    return this.trazos().reduce((s, t) => s + t.puntos.length / 2, 0);
+  }
+
+  protected empezarTrazo(ev: PointerEvent): void {
+    const v = this.vista();
+    if (v?.v !== 'dibujar' || v.listo || this.puntosUsados() >= MAX_PUNTOS_DIBUJO) return;
+    ev.preventDefault();
+    try {
+      (ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
+    } catch {
+      /* puntero que ya no está activo */
+    }
+    const p = this.punto(ev);
+    this.trazoActual = { color: this.color(), grosor: this.grosor(), puntos: [p.x, p.y] };
+    const ctx = this.pizarra()?.nativeElement.getContext('2d');
+    if (ctx) pintarTrazos(ctx, [...this.trazos(), this.trazoActual]);
+  }
+
+  protected seguirTrazo(ev: PointerEvent): void {
+    const t = this.trazoActual;
+    if (!t) return;
+    const p = this.punto(ev);
+    const x0 = t.puntos[t.puntos.length - 2];
+    const y0 = t.puntos[t.puntos.length - 1];
+    // Se saltean los puntos muy pegados: el dibujo pesa menos y se ve igual.
+    if (Math.hypot(p.x - x0, p.y - y0) < 5 || this.puntosUsados() + t.puntos.length / 2 >= MAX_PUNTOS_DIBUJO) return;
+    t.puntos.push(p.x, p.y);
+    const ctx = this.pizarra()?.nativeElement.getContext('2d');
+    if (!ctx) return;
+    ctx.strokeStyle = t.color;
+    ctx.lineWidth = t.grosor;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+
+  protected terminarTrazo(): void {
+    const t = this.trazoActual;
+    if (!t) return;
+    this.trazoActual = null;
+    this.trazos.update((lista) => [...lista, t]);
+    this.enviarDibujo(false);
+  }
+
+  protected deshacer(): void {
+    this.trazos.update((lista) => lista.slice(0, -1));
+    this.enviarDibujo(false);
+  }
+
+  protected borrarTodo(): void {
+    this.trazos.set([]);
+    this.enviarDibujo(false);
+  }
+
+  protected terminarDibujo(): void {
+    if (this.trazos().length) this.enviarDibujo(true);
+  }
+
+  private enviarDibujo(listo: boolean): void {
+    this.cliente?.enviar({ t: 'dibujo', trazos: this.trazos(), listo });
+  }
+
   protected idiomaContrario(): void {
     cambiarIdioma(idioma() === 'es' ? 'en' : 'es');
   }
 
   private recibir(v: Vista): void {
     const antes = this.vista();
+    // Un encargo nuevo de Garabatos empieza con la pizarra en blanco.
+    if (v.v === 'dibujar' && v.consigna !== this.encargo) {
+      this.encargo = v.consigna;
+      this.trazos.set([]);
+    }
     // Una pista nueva (o la segunda vuelta del Impostor) empieza con el cuadro vacío.
     if (v.v === 'escribir' && (antes?.v !== 'escribir' || antes.impostor?.vuelta !== v.impostor?.vuelta)) this.borrador.set('');
     if ('restante' in v) this.fin.set(Date.now() + v.restante);

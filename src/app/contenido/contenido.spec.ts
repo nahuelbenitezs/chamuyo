@@ -35,4 +35,12 @@ describe('contenido', () => {
       expect(new Set(palabras).size).toBe(palabras.length);
     }
   });
+
+  it('Garabatos tiene más de cien cosas para dibujar, sin repetir', () => {
+    for (const c of [contenidoEs, contenidoEn]) {
+      const dibujos = (c.dibujos ?? []).map(normalizar);
+      expect(dibujos.length).toBeGreaterThanOrEqual(100);
+      expect(new Set(dibujos).size).toBe(dibujos.length);
+    }
+  });
 });

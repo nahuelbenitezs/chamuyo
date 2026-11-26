@@ -1,5 +1,5 @@
 import { Control, CONTROL, IdMinijuego } from '../minijuegos/juegos';
-import { faltanResponder, Modo, opcionesPara, Partida, ranking, TipoRonda, VUELTAS_IMPOSTOR } from './motor';
+import { faltanResponder, Modo, opcionesPara, Partida, ranking, TipoRonda, Trazo, VUELTAS_IMPOSTOR } from './motor';
 
 /** Mensajes que manda un celular a la pantalla anfitriona. */
 export type MsgJugador =
@@ -11,7 +11,9 @@ export type MsgJugador =
   /** Joystick de los minijuegos: x e y entre -1 y 1. */
   | { t: 'mando'; x: number; y: number }
   /** Un toque del botón de los minijuegos. */
-  | { t: 'toque' };
+  | { t: 'toque' }
+  /** Garabatos: el dibujo entero hasta ahora; `listo` cuando el jugador terminó. */
+  | { t: 'dibujo'; trazos: Trazo[]; listo: boolean };
 
 export type EtapaMinijuego = 'intro' | 'jugando' | 'resultado';
 
@@ -33,7 +35,8 @@ export type Vista =
     }
   | { v: 'acerto'; consigna: string }
   | { v: 'votar'; tipo: TipoRonda; consigna: string; opciones: Array<{ id: string; texto: string }>; elegido: string | null; restante: number }
-  | { v: 'mirar'; motivo: 'votando' | 'revelando' | 'tabla' | 'sin-opciones' }
+  | { v: 'mirar'; motivo: 'votando' | 'revelando' | 'tabla' | 'sin-opciones' | 'tu-dibujo' }
+  | { v: 'dibujar'; consigna: string; listo: boolean; restante: number }
   | { v: 'final'; puesto: number; puntos: number; jefe: boolean; ganador: string; empate: boolean; resumen: Resumen }
   | { v: 'control'; juego: IdMinijuego; control: Control; etapa: EtapaMinijuego; puesto: number | null; ganados: number };
 
@@ -79,7 +82,12 @@ export function vistaPara(p: Partida, id: string, restante: number, etapa: Etapa
       const nombreJefe = p.jugadores.find((j) => j.id === idJefe(p))?.nombre ?? '';
       return { v: 'lobby', jefe, cantidad: p.jugadores.length, nombre: yo.nombre, avatar: yo.avatar, nombreJefe, modo: p.modo };
     }
+    case 'dibujar':
+      return p.encargos[id]
+        ? { v: 'dibujar', consigna: p.encargos[id], listo: p.dibujosListos.includes(id), restante }
+        : { v: 'mirar', motivo: 'tabla' };
     case 'escribir':
+      if (r!.artista === id) return { v: 'mirar', motivo: 'tu-dibujo' };
       return {
         v: 'escribir',
         tipo: r!.tipo,
@@ -94,6 +102,7 @@ export function vistaPara(p: Partida, id: string, restante: number, etapa: Etapa
             : undefined,
       };
     case 'votar': {
+      if (r!.artista === id) return { v: 'mirar', motivo: 'tu-dibujo' };
       if (r!.acertaron.includes(id)) return { v: 'acerto', consigna: r!.consigna };
       const opciones = opcionesPara(p, id).map(({ id: oid, texto }) => ({ id: oid, texto }));
       if (!opciones.length) return { v: 'mirar', motivo: 'sin-opciones' };

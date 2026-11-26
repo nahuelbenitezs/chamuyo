@@ -69,14 +69,18 @@
                 }
               </div>
               <div class="pie-config">
-                <label class="rondas">
-                  {{ t().rondas }}
-                  <select (change)="rondas.set(+$any($event.target).value)">
-                    @for (n of [4, 6, 8, 10]; track n) {
-                      <option [value]="n" [selected]="n === rondas()">{{ n }}</option>
-                    }
-                  </select>
-                </label>
+                @if (modo() === 'garabatos') {
+                  <span class="rondas">{{ t().rondasGarabatos }}</span>
+                } @else {
+                  <label class="rondas">
+                    {{ t().rondas }}
+                    <select (change)="rondas.set(+$any($event.target).value)">
+                      @for (n of [4, 6, 8, 10]; track n) {
+                        <option [value]="n" [selected]="n === rondas()">{{ n }}</option>
+                      }
+                    </select>
+                  </label>
+                }
                 <button class="boton grande" type="button" [disabled]="jugadores().length < minimo()" (click)="empezar()">
                   <i class="ph-bold ph-play"></i> {{ t().empezar }}
                 </button>
@@ -88,6 +92,27 @@
               }
             </div>
           </div>
+        </section>
+      }
+
+      @case ('dibujar') {
+        <section class="ronda dibujando">
+          <div class="ronda-cabeza">
+            <span class="chip tipo">{{ t().modoGarabatos }}</span>
+            <span class="reloj titular" [class.urgente]="segundos() <= 10">{{ segundos() }}</span>
+          </div>
+          <h1 class="consigna titular">{{ t().aDibujar }}</h1>
+          <p class="instruccion">{{ t().dibujarAyuda }}</p>
+          <ul class="estado-jugadores">
+            @for (j of jugadores(); track j.id) {
+              <li [class.listo]="listos().has(j.id)">
+                <img class="avatar" [src]="imagen(j.avatar)" [alt]="j.nombre" />
+                @if (listos().has(j.id)) {
+                  <i class="ph-bold ph-check-circle marca-listo"></i>
+                }
+              </li>
+            }
+          </ul>
         </section>
       }
 
@@ -133,6 +158,41 @@
               }
             </ul>
           </section>
+          } @else if (r.tipo === 'garabato') {
+          <section class="ronda garabato">
+            <div class="ronda-cabeza">
+              <span class="chip">{{ r.dobles ? t().final : t().ronda + ' ' + r.numero + ' ' + t().de + ' ' + partida().totalRondas }}</span>
+              <span class="chip tipo">{{ t().modoGarabatos }}</span>
+              @if (r.dobles) {
+                <span class="chip dobles">{{ t().puntosDobles }}</span>
+              }
+              <span class="reloj titular" [class.urgente]="segundos() <= 10">{{ segundos() }}</span>
+            </div>
+            <div class="garabato-escena">
+              <app-garabato class="garabato-grande" [trazos]="dibujoDe(r.artista)" [animar]="true" [etiqueta]="t().dibujoDe + ' ' + nombreDe(r.artista ?? '')" />
+              <div class="garabato-texto">
+                <p class="categoria-etiqueta">{{ t().dibujoDe }}</p>
+                <p class="artista">
+                  <img class="avatar" [src]="imagen(avatarDe(r.artista ?? ''))" alt="" />
+                  {{ nombreDe(r.artista ?? '') }}
+                </p>
+                <h1 class="consigna titular">{{ t().queEs }}</h1>
+                <p class="instruccion">{{ t().inventaTitulo }}</p>
+                <ul class="estado-jugadores">
+                  @for (j of jugadores(); track j.id) {
+                    @if (j.id !== r.artista) {
+                      <li [class.listo]="listos().has(j.id)">
+                        <img class="avatar" [src]="imagen(j.avatar)" [alt]="j.nombre" />
+                        @if (listos().has(j.id)) {
+                          <i class="ph-bold ph-check-circle marca-listo"></i>
+                        }
+                      </li>
+                    }
+                  }
+                </ul>
+              </div>
+            </div>
+          </section>
           } @else {
           <section class="ronda">
             <div class="ronda-cabeza">
@@ -152,7 +212,7 @@
                 }
               }
             </h1>
-            <p class="instruccion">{{ r.tipo === 'chamuyo' ? t().escribanMentira : t().escribanOcurrencia }}</p>
+            <p class="instruccion">{{ esChamuyo(r) ? t().escribanMentira : t().escribanOcurrencia }}</p>
             <ul class="estado-jugadores">
               @for (j of jugadores(); track j.id) {
                 <li [class.listo]="listos().has(j.id)">
@@ -198,9 +258,12 @@
           } @else {
           <section class="ronda">
             <div class="ronda-cabeza">
-              <span class="chip">{{ r.tipo === 'chamuyo' ? t().votenVerdad : t().votenMejor }}</span>
+              <span class="chip">{{ esChamuyo(r) ? t().votenVerdad : t().votenMejor }}</span>
               <span class="reloj titular" [class.urgente]="segundos() <= 10">{{ segundos() }}</span>
             </div>
+            @if (r.tipo === 'garabato') {
+              <app-garabato class="garabato-chico" [trazos]="dibujoDe(r.artista)" [etiqueta]="t().dibujoDe + ' ' + nombreDe(r.artista ?? '')" />
+            } @else {
             <p class="consigna-chica">
               @for (parte of partes(r.consigna); track $index) {
                 @if (parte.hueco) {
@@ -210,6 +273,7 @@
                 }
               }
             </p>
+            }
             <ul class="opciones" [style.--cols]="r.opciones.length > 4 ? 3 : 2">
               @for (o of r.opciones; track o.id; let i = $index) {
                 <li class="tarjeta" [style.animation-delay.ms]="i * 90">{{ o.texto }}</li>
@@ -310,6 +374,9 @@
           </section>
           } @else {
           <section class="ronda">
+            @if (r.tipo === 'garabato') {
+              <app-garabato class="garabato-chico" [trazos]="dibujoDe(r.artista)" [etiqueta]="t().dibujoDe + ' ' + nombreDe(r.artista ?? '')" />
+            } @else {
             <p class="consigna-chica">
               @for (parte of partes(r.consigna); track $index) {
                 @if (parte.hueco) {
@@ -319,15 +386,16 @@
                 }
               }
             </p>
+            }
             <ul class="opciones" [style.--cols]="r.opciones.length > 4 ? 3 : 2">
               @for (o of r.opciones; track o.id) {
                 <li class="tarjeta" [class.revelada]="revelada(o)" [class.verdad]="revelada(o) && o.verdad"
-                  [class.mentira]="revelada(o) && !o.verdad && r.tipo === 'chamuyo'" [class.apagada]="!revelada(o) && paso() >= 0">
+                  [class.mentira]="revelada(o) && !o.verdad && esChamuyo(r)" [class.apagada]="!revelada(o) && paso() >= 0">
                   <span class="texto">{{ o.texto }}</span>
                   @if (revelada(o)) {
                     <div class="votantes">
                       @for (v of o.votantes; track v) {
-                        <img class="avatar chico" [class.cayo]="!o.verdad && r.tipo === 'chamuyo'" [src]="imagen(avatarDe(v), !o.verdad && r.tipo === 'chamuyo' ? 'sorpresa' : '')" [alt]="nombreDe(v)" [title]="nombreDe(v)" />
+                        <img class="avatar chico" [class.cayo]="!o.verdad && esChamuyo(r)" [src]="imagen(avatarDe(v), !o.verdad && esChamuyo(r) ? 'sorpresa' : '')" [alt]="nombreDe(v)" [title]="nombreDe(v)" />
                       }
                     </div>
                     <p class="autoria">
@@ -336,7 +404,7 @@
                       } @else if (o.senuelo) {
                         {{ t().dePlantilla }}
                       } @else {
-                        @if (r.tipo === 'chamuyo') {
+                        @if (esChamuyo(r)) {
                           {{ t().chamuyoDe }}
                         }
                         <b>{{ nombreDe(o.autores[0]) }}{{ o.autores.length > 1 ? ' +' + (o.autores.length - 1) : '' }}</b>

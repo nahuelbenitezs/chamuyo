@@ -1,4 +1,5 @@
 import { Contenido } from '../juego/motor';
+import { dibujosEs } from './garabatos';
 import { secretasEs } from './impostor';
 
 export const contenidoEs: Contenido = {
@@ -254,4 +255,5 @@ export const contenidoEs: Contenido = {
     "Lo que dice la etiqueta de un buzo de abuela",
   ],
   secretas: secretasEs,
+  dibujos: dibujosEs,
 };

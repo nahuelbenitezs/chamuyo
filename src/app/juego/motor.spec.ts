@@ -1,4 +1,7 @@
 import {
+  cerrarDibujos,
+  faltanDibujar,
+  guardarDibujo,
   censurar,
   PUNTOS_PUESTO,
   resultadoMinijuego,
@@ -211,5 +214,41 @@ describe('motor', () => {
   it('tapa las pistas que dicen la palabra secreta', () => {
     expect(censurar('Empanadas!', 'empanada')).toBe('🙊');
     expect(censurar('horno', 'empanada')).toBe('horno');
+  });
+
+  it('Garabatos: cada uno dibuja algo distinto y después se adivina dibujo por dibujo', () => {
+    const conDibujos: Contenido = { ...contenido, dibujos: ['Un carpincho en la playa', 'Un mate con anteojos', 'Una vaca en el espacio', 'Un perro manejando', 'Una pizza triste', 'Un fantasma tomando mate', 'Un pulpo baterista', 'Un dinosaurio en el súper', 'Un abuelo bailando', 'Un robot cocinando', 'Una nube enojada', 'Un gato astronauta'] };
+    let p = iniciar(conJugadores(3), 'garabatos', 4, conDibujos, azarFijo());
+    expect(p.fase).toBe('dibujar');
+    expect(new Set(Object.values(p.encargos)).size).toBe(3);
+    const trazo = { color: '#1b1600', grosor: 8, puntos: [10, 10, 500, 500] };
+    p = guardarDibujo(p, 'j1', [trazo, { color: 'javascript:', grosor: 8, puntos: [1, 2] }], true);
+    expect(p.dibujos['j1']).toEqual([trazo]);
+    p = guardarDibujo(p, 'j2', [{ color: '#ff6b5b', grosor: 22, puntos: [0, 0, 2000, -5] }], true);
+    expect(p.dibujos['j2'][0].puntos).toEqual([0, 0, 1000, 0]);
+    expect(faltanDibujar(p)).toEqual(['j3']);
+    // j3 no dibujó nada: su ronda se saltea.
+    p = cerrarDibujos(p, azarFijo());
+    expect(p.totalRondas).toBe(2);
+    expect(p.fase).toBe('escribir');
+    const r = p.ronda!;
+    const artista = r.artista!;
+    const otros = ['j1', 'j2', 'j3'].filter((id) => id !== artista);
+    // El que dibujó no escribe ni vota.
+    expect(responder(p, artista, 'algo').ronda!.respuestas[artista]).toBeUndefined();
+    p = responder(p, otros[0], 'Un caballo cansado');
+    p = responder(p, otros[1], 'Una silla rota');
+    p = cerrarEscritura(p, azarFijo());
+    expect(opcionesPara(p, artista)).toEqual([]);
+    const verdad = p.ronda!.opciones.find((o) => o.verdad)!;
+    expect(verdad.texto).toBe(p.encargos[artista]);
+    const deOtro0 = p.ronda!.opciones.find((o) => o.autores.includes(otros[0]))!;
+    p = votar(p, otros[0], verdad.id);
+    p = votar(p, otros[1], deOtro0.id);
+    p = puntuar(p);
+    const puntos = Object.fromEntries(p.jugadores.map((j) => [j.id, j.puntos]));
+    expect(puntos[otros[0]]).toBe(PUNTOS.verdad + PUNTOS.engano);
+    expect(puntos[otros[1]]).toBe(0);
+    expect(puntos[artista]).toBe(PUNTOS.dibujo);
   });
 });

@@ -93,6 +93,8 @@
                   <small>{{ t().categoria }}: {{ v.consigna }}</small>
                 }
               </div>
+            } @else if (v.tipo === 'garabato') {
+              <p class="consigna mirar-dibujo"><i class="ph-bold ph-television-simple"></i> {{ t().mirarDibujo }}</p>
             } @else {
               <p class="consigna">
                 @for (parte of partes(v.consigna); track $index) {
@@ -113,7 +115,7 @@
             } @else {
               <form class="responder" (submit)="$event.preventDefault(); mandar()">
                 <label class="campo">
-                  <span>{{ v.tipo === 'chamuyo' ? t().tuMentira : v.tipo === 'impostor' ? t().tuPista : t().tuRespuesta }}</span>
+                  <span>{{ v.tipo === 'chamuyo' ? t().tuMentira : v.tipo === 'impostor' ? t().tuPista : v.tipo === 'garabato' ? t().tuTitulo : t().tuRespuesta }}</span>
                   <textarea class="entrada" rows="3" [value]="borrador()" (input)="borrador.set($any($event.target).value)"
                     [attr.maxlength]="maxLargo" enterkeyhint="send" (keydown.enter)="$event.preventDefault(); mandar()"></textarea>
                 </label>
@@ -131,7 +133,7 @@
         @case ('votar') {
           <section class="turno">
             <div class="cabeza">
-              <span class="chip">{{ v.tipo === 'chamuyo' ? t().elegiVerdad : v.tipo === 'impostor' ? t().quienImpostor : t().elegiMejor }}</span>
+              <span class="chip">{{ v.tipo === 'chamuyo' || v.tipo === 'garabato' ? t().elegiVerdad : v.tipo === 'impostor' ? t().quienImpostor : t().elegiMejor }}</span>
               <span class="reloj" [class.urgente]="segundos() <= 10">{{ segundos() }}{{ t().segundos }}</span>
             </div>
             @if (v.elegido) {
@@ -145,6 +147,48 @@
                   <li><button type="button" class="voto" (click)="votar(o.id)">{{ o.texto }}</button></li>
                 }
               </ul>
+            }
+          </section>
+        }
+        @case ('dibujar') {
+          <section class="turno dibujar">
+            <div class="cabeza">
+              <span class="chip">{{ t().dibuja }}</span>
+              <span class="reloj" [class.urgente]="segundos() <= 10">{{ segundos() }}{{ t().segundos }}</span>
+            </div>
+            <p class="encargo titular">{{ v.consigna }}</p>
+            <canvas #pizarra class="pizarra" width="1000" height="1000" [class.bloqueada]="v.listo"
+              (pointerdown)="empezarTrazo($event)" (pointermove)="seguirTrazo($event)" (pointerup)="terminarTrazo()"
+              (pointercancel)="terminarTrazo()" (contextmenu)="$event.preventDefault()"></canvas>
+            @if (!v.listo) {
+              <div class="herramientas">
+                <div class="colores" role="radiogroup">
+                  @for (c of paleta; track c) {
+                    <button type="button" class="color" role="radio" [style.background]="c" [attr.aria-checked]="color() === c"
+                      [attr.aria-label]="c === papel ? t().goma : c" (click)="color.set(c)">
+                      @if (c === papel) {
+                        <i class="ph-bold ph-eraser"></i>
+                      }
+                    </button>
+                  }
+                </div>
+                <div class="grosores">
+                  @for (g of grosores; track g) {
+                    <button type="button" class="grosor" [attr.aria-pressed]="grosor() === g" [attr.aria-label]="g + 'px'" (click)="grosor.set(g)">
+                      <span [style.width.px]="6 + g / 3" [style.height.px]="6 + g / 3" [style.background]="color() === papel ? '#aaa6b1' : color() === paleta[0] ? '#f3f2ee' : color()"></span>
+                    </button>
+                  }
+                  <button type="button" class="icono-boton" (click)="deshacer()" [disabled]="!trazos().length" [attr.aria-label]="t().deshacer">
+                    <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                  </button>
+                  <button type="button" class="icono-boton" (click)="borrarTodo()" [disabled]="!trazos().length" [attr.aria-label]="t().borrarTodo">
+                    <i class="ph-bold ph-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <button class="boton ancho" type="button" [disabled]="!trazos().length" (click)="terminarDibujo()">{{ t().termine }}</button>
+            } @else {
+              <div class="enviado"><i class="ph-bold ph-check-circle"></i><small>{{ t().listo }}</small></div>
             }
           </section>
         }
@@ -189,7 +233,7 @@
           </section>
         }
         @case ('mirar') {
-          <section class="mensaje"><i class="ph-bold ph-television-simple tele"></i><p>{{ t().mira }}</p></section>
+          <section class="mensaje"><i class="ph-bold ph-television-simple tele"></i><p>{{ v.motivo === 'tu-dibujo' ? t().tuDibujoMira : t().mira }}</p></section>
         }
         @case ('final') {
           <section class="mensaje">
