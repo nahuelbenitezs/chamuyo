@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { idioma } from './i18n';
+import { activarNavegacionTv } from './navegacion-tv';
 import { PantallaAnfitrion } from './pantallas/anfitrion';
 import { PantallaInicio } from './pantallas/inicio';
 import { PantallaJugador } from './pantallas/jugador';
@@ -29,5 +30,7 @@ export class App {
 
   constructor() {
     document.documentElement.lang = idioma();
+    // Las flechas del control remoto de la tele mueven el foco entre los botones.
+    activarNavegacionTv(document);
   }
 }

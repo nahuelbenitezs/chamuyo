@@ -20,7 +20,7 @@
       <p class="sublema">{{ t().sublema }}</p>
       <p class="bajada">{{ t().bajada }}</p>
       <div class="ctas">
-        <button class="boton grande" type="button" (click)="crear.emit()"><i class="ph-bold ph-television-simple"></i> {{ t().crearSala }}</button>
+        <button class="boton grande" type="button" data-foco-inicial (click)="crear.emit()"><i class="ph-bold ph-television-simple"></i> {{ t().crearSala }}</button>
         <button class="boton secundario grande" type="button" (click)="unirse.emit()"><i class="ph-bold ph-device-mobile"></i> {{ t().tengoCodigo }}</button>
       </div>
     </div>

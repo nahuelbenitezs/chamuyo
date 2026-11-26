@@ -62,7 +62,8 @@
             <div class="config">
               <div class="grupo" role="radiogroup" [attr.aria-label]="t().modo">
                 @for (m of modos; track m) {
-                  <button type="button" class="opcion-modo" role="radio" [attr.aria-checked]="modo() === m" (click)="modo.set(m)">
+                  <button type="button" class="opcion-modo" role="radio" [attr.aria-checked]="modo() === m" (click)="modo.set(m)"
+                    [attr.data-foco-inicial]="modo() === m && jugadores().length < minimo() ? '' : null">
                     <b>{{ nombreModo(m) }}</b>
                     <small>{{ descModo(m) }}</small>
                   </button>
@@ -81,7 +82,7 @@
                     </select>
                   </label>
                 }
-                <button class="boton grande" type="button" [disabled]="jugadores().length < minimo()" (click)="empezar()">
+                <button class="boton grande" type="button" data-foco-inicial [disabled]="jugadores().length < minimo()" (click)="empezar()">
                   <i class="ph-bold ph-play"></i> {{ t().empezar }}
                 </button>
               </div>
@@ -463,7 +464,7 @@
             }
           </ol>
           <div class="final-acciones">
-            <button class="boton grande" type="button" (click)="jugarOtra()"><i class="ph-bold ph-arrow-clockwise"></i> {{ t().jugarOtra }}</button>
+            <button class="boton grande" type="button" data-foco-inicial (click)="jugarOtra()"><i class="ph-bold ph-arrow-clockwise"></i> {{ t().jugarOtra }}</button>
             <button class="boton secundario grande" type="button" (click)="compartir()" [disabled]="compartiendo()">
               <i class="ph-bold ph-share-network"></i> {{ compartiendo() ? t().preparando : t().compartirResultado }}
             </button>
