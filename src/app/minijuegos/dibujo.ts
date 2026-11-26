@@ -385,7 +385,11 @@ function dibujarPapa(ctx: CanvasRenderingContext2D, e: EstadoPapa, r: Recursos):
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.globalAlpha = 1 - k * 0.6;
-    rotulo(ctx, r.textos.boom, e.boom.x, e.boom.y - 40 - k * 30, COLOR.acento, 10);
+    // El cartel no se sale de la pantalla aunque la explosión sea en un borde.
+    const mitad = ctx.measureText(r.textos.boom).width / 2 + 24;
+    const bx = Math.min(ANCHO - mitad, Math.max(mitad, e.boom.x));
+    const by = Math.min(ALTO - 70, Math.max(70, e.boom.y - 40 - k * 30));
+    rotulo(ctx, r.textos.boom, bx, by, COLOR.acento, 10);
     ctx.globalAlpha = 1;
   }
 }
