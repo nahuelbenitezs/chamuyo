@@ -1,7 +1,7 @@
-import { Component, computed, effect, input, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, input, OnDestroy, OnInit, signal, untracked } from '@angular/core';
 import { cambiarIdioma, idioma, t } from '../i18n';
 import { MAX_LARGO, Modo } from '../juego/motor';
-import { imagen, nombrePersonaje, personaje, PERSONAJES, partesConsigna } from '../juego/personajes';
+import { colorDe, imagen, nombrePersonaje, personaje, PERSONAJES, partesConsigna } from '../juego/personajes';
 import { contar } from '../juego/analitica';
 import { codigoValido, Resumen, Vista } from '../juego/protocolo';
 import { compartirTarjeta } from '../juego/tarjeta';
@@ -56,6 +56,8 @@ export class PantallaJugador implements OnInit, OnDestroy {
   protected readonly nombrePersonaje = nombrePersonaje;
   protected readonly partes = partesConsigna;
   protected readonly maxLargo = MAX_LARGO;
+  protected readonly colorDe = colorDe;
+  protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'minijuegos'];
 
   protected codigo = signal('');
   protected nombre = signal(leer('chamuyo-nombre'));
@@ -68,6 +70,8 @@ export class PantallaJugador implements OnInit, OnDestroy {
   protected ahora = signal(Date.now());
   protected compartiendo = signal(false);
   protected opinion = signal<number | null>(null);
+  /** Posición del joystick de los minijuegos, entre -1 y 1. */
+  protected palanca = signal({ x: 0, y: 0 });
   protected readonly caritas = [
     { valor: 1, emoji: '😴' },
     { valor: 2, emoji: '😐' },
@@ -85,14 +89,20 @@ export class PantallaJugador implements OnInit, OnDestroy {
   private ultimaVista = '';
   // El id vive en sessionStorage: sobrevive a recargar la pestaña, pero cada pestaña es otro jugador.
   private id = leerSesion() || this.nuevoId();
+  private arrastrando = false;
+  private ultimoEnvio = 0;
+  private pendiente: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     // Vibra cuando cambia lo que hay que hacer, para que nadie se quede mirando la tele sin responder.
     effect(() => {
       const v = this.vista();
-      if (!v || v.v === this.ultimaVista) return;
-      this.ultimaVista = v.v;
-      if (v.v === 'escribir' || v.v === 'votar') navigator.vibrate?.(60);
+      const clave = v?.v === 'control' ? `control-${v.etapa}` : (v?.v ?? '');
+      if (!v || clave === this.ultimaVista) return;
+      this.ultimaVista = clave;
+      if (v.v === 'escribir' || v.v === 'votar' || clave === 'control-intro') navigator.vibrate?.(60);
+      if (clave === 'control-jugando') navigator.vibrate?.([40, 60, 40]);
+      if (clave !== 'control-jugando') untracked(() => this.soltarPalanca(false));
     });
   }
 
@@ -104,6 +114,7 @@ export class PantallaJugador implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.cliente?.cerrar();
     if (this.reloj) clearInterval(this.reloj);
+    if (this.pendiente) clearTimeout(this.pendiente);
   }
 
   protected escribirCodigo(valor: string): void {
@@ -166,6 +177,74 @@ export class PantallaJugador implements OnInit, OnDestroy {
 
   protected otra(): void {
     this.cliente?.enviar({ t: 'otra' });
+  }
+
+  protected nombreModo(m: Modo): string {
+    const x = t();
+    return { mixto: x.modoMixto, chamuyo: x.modoChamuyo, ocurrencias: x.modoOcurrencias, minijuegos: x.modoMinijuegos }[m];
+  }
+
+  // ---- controles de los minijuegos ----
+
+  protected tocar(ev: PointerEvent): void {
+    ev.preventDefault();
+    this.cliente?.enviar({ t: 'toque' });
+    navigator.vibrate?.(12);
+  }
+
+  protected agarrarPalanca(ev: PointerEvent): void {
+    ev.preventDefault();
+    try {
+      // Sigue al dedo aunque salga del área del joystick.
+      (ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
+    } catch {
+      /* puntero que ya no está activo */
+    }
+    this.arrastrando = true;
+    this.moverPalanca(ev);
+  }
+
+  protected moverPalanca(ev: PointerEvent): void {
+    if (!this.arrastrando) return;
+    const base = (ev.currentTarget as HTMLElement).querySelector('.base');
+    if (!base) return;
+    const caja = base.getBoundingClientRect();
+    // La perilla llega hasta el borde de la base: un 29% del ancho desde el centro.
+    const radio = caja.width * 0.29;
+    let x = (ev.clientX - (caja.left + caja.width / 2)) / radio;
+    let y = (ev.clientY - (caja.top + caja.height / 2)) / radio;
+    const largo = Math.hypot(x, y);
+    if (largo > 1) {
+      x /= largo;
+      y /= largo;
+    }
+    this.palanca.set({ x, y });
+    this.enviarPalanca(false);
+  }
+
+  protected soltarPalanca(enviar = true): void {
+    const { x, y } = this.palanca();
+    const estaba = this.arrastrando || x !== 0 || y !== 0;
+    this.arrastrando = false;
+    this.palanca.set({ x: 0, y: 0 });
+    if (enviar && estaba) this.enviarPalanca(true);
+  }
+
+  /** Manda la posición como mucho cada 50 ms, y siempre la última. */
+  private enviarPalanca(inmediato: boolean): void {
+    const espera = 50 - (performance.now() - this.ultimoEnvio);
+    if (!inmediato && espera > 0) {
+      this.pendiente ??= setTimeout(() => {
+        this.pendiente = null;
+        this.enviarPalanca(true);
+      }, espera);
+      return;
+    }
+    if (this.pendiente) clearTimeout(this.pendiente);
+    this.pendiente = null;
+    this.ultimoEnvio = performance.now();
+    const { x, y } = this.palanca();
+    this.cliente?.enviar({ t: 'mando', x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 });
   }
 
   protected idiomaContrario(): void {

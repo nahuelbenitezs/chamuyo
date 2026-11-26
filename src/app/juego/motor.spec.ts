@@ -1,4 +1,6 @@
 import {
+  PUNTOS_PUESTO,
+  resultadoMinijuego,
   agregarJugador,
   claveDe,
   avanzar,
@@ -127,5 +129,28 @@ describe('motor', () => {
     const usados = new Set(['uno', 'dos', 'tres'].map((consigna) => claveDe({ consigna })));
     const p = iniciar(conJugadores(2), 'ocurrencias', 1, muchas, azarFijo(), usados);
     expect(p.ronda!.consigna).toBe('cuatro');
+  });
+
+  it('el modo minijuegos arma rondas de minijuego y reparte puntos por puesto', () => {
+    let p = iniciar(conJugadores(3), 'minijuegos', 2, contenido, azarFijo());
+    expect(p.fase).toBe('minijuego');
+    expect(p.ronda!.minijuego).not.toBeNull();
+    p = resultadoMinijuego(p, [['j2'], ['j3'], ['j1']]);
+    expect(p.fase).toBe('revelar');
+    const puntos = Object.fromEntries(p.jugadores.map((j) => [j.id, j.puntos]));
+    expect(puntos).toEqual({ j2: PUNTOS_PUESTO[0], j3: PUNTOS_PUESTO[1], j1: PUNTOS_PUESTO[2] });
+    p = avanzar(avanzar(p, azarFijo()), azarFijo());
+    // La última ronda vale doble.
+    expect(p.ronda!.dobles).toBe(true);
+    p = resultadoMinijuego(p, [['j1'], ['j2'], ['j3']]);
+    expect(p.jugadores.find((j) => j.id === 'j1')!.puntos).toBe(PUNTOS_PUESTO[2] + 2 * PUNTOS_PUESTO[0]);
+  });
+
+  it('en un minijuego los empatados comparten puesto y puntos', () => {
+    let p = iniciar(conJugadores(3), 'minijuegos', 2, contenido, azarFijo());
+    p = resultadoMinijuego(p, [['j1', 'j2'], ['j3']]);
+    const puntos = Object.fromEntries(p.jugadores.map((j) => [j.id, j.puntos]));
+    expect(puntos).toEqual({ j1: PUNTOS_PUESTO[0], j2: PUNTOS_PUESTO[0], j3: PUNTOS_PUESTO[2] });
+    expect(p.ronda!.lugar).toEqual({ j1: 1, j2: 1, j3: 3 });
   });
 });

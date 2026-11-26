@@ -1,9 +1,10 @@
 // Lógica pura de una partida. La pantalla anfitriona es la única que la ejecuta;
 // los celulares solo reciben la vista que les corresponde.
+import { IdMinijuego, MINIJUEGOS } from '../minijuegos/juegos';
 
-export type Modo = 'chamuyo' | 'ocurrencias' | 'mixto';
-export type TipoRonda = 'chamuyo' | 'ocurrencias';
-export type Fase = 'lobby' | 'escribir' | 'votar' | 'revelar' | 'tabla' | 'final';
+export type Modo = 'chamuyo' | 'ocurrencias' | 'mixto' | 'minijuegos';
+export type TipoRonda = 'chamuyo' | 'ocurrencias' | 'minijuego';
+export type Fase = 'lobby' | 'escribir' | 'votar' | 'minijuego' | 'revelar' | 'tabla' | 'final';
 
 export interface Jugador {
   id: string;
@@ -42,6 +43,10 @@ export interface Ronda {
   votos: Record<string, string>;
   puntosRonda: Record<string, number>;
   dobles: boolean;
+  /** Solo en rondas de minijuego: cuál se juega, en qué orden terminaron y el puesto de cada uno (empates comparten puesto). */
+  minijuego: IdMinijuego | null;
+  orden: string[];
+  lugar: Record<string, number>;
 }
 
 export interface Contenido {
@@ -55,7 +60,7 @@ export interface Partida {
   jugadores: Jugador[];
   totalRondas: number;
   ronda: Ronda | null;
-  plan: Array<{ tipo: TipoRonda; dato?: Dato; consigna?: string }>;
+  plan: Array<{ tipo: TipoRonda; dato?: Dato; consigna?: string; minijuego?: IdMinijuego }>;
   /** La respuesta más votada de la partida: la mentira que más engañó o la ocurrencia que más gustó. */
   destacado: Destacado | null;
 }
@@ -72,6 +77,8 @@ export const MAX_JUGADORES = 8;
 export const MIN_JUGADORES = 2;
 export const MAX_LARGO = 60;
 export const PUNTOS = { verdad: 1000, engano: 500, voto: 500, unanime: 1000 } as const;
+/** Puntos de un minijuego según el puesto (1°, 2°, 3°…). */
+export const PUNTOS_PUESTO = [1000, 600, 400, 250, 150, 100, 50, 0] as const;
 
 export type Azar = () => number;
 
@@ -146,8 +153,12 @@ export function iniciar(
   const datos = priorizarNuevos(contenido.datos, (dato) => claveDe({ dato }), usados, azar);
   const consignas = priorizarNuevos(contenido.consignas, (consigna) => claveDe({ consigna }), usados, azar);
   const plan: Partida['plan'] = [];
-  for (let i = 0; i < rondas; i++) {
-    const tipo: TipoRonda = modo === 'mixto' ? (i % 2 === 0 ? 'chamuyo' : 'ocurrencias') : modo;
+  const minijuegos = mezclar(MINIJUEGOS, azar);
+  for (let i = 0; i < rondas && modo === 'minijuegos'; i++) {
+    plan.push({ tipo: 'minijuego', minijuego: minijuegos[i % minijuegos.length] });
+  }
+  for (let i = 0; i < rondas && modo !== 'minijuegos'; i++) {
+    const tipo = modo === 'mixto' ? (i % 2 === 0 ? 'chamuyo' : 'ocurrencias') : modo;
     if (tipo === 'chamuyo' && datos.length) plan.push({ tipo, dato: datos.pop() });
     else if (consignas.length) plan.push({ tipo: 'ocurrencias', consigna: consignas.pop() });
   }
@@ -168,9 +179,11 @@ function empezarRonda(p: Partida, indice: number, azar: Azar): Partida {
   if (!paso) return { ...p, fase: 'final', ronda: null };
   const nombres = p.jugadores.map((j) => j.nombre);
   const consigna =
-    paso.tipo === 'chamuyo'
-      ? paso.dato!.texto
-      : paso.consigna!.replace(/\{jugador\}/g, () => nombres[Math.floor(azar() * nombres.length)]);
+    paso.tipo === 'minijuego'
+      ? ''
+      : paso.tipo === 'chamuyo'
+        ? paso.dato!.texto
+        : paso.consigna!.replace(/\{jugador\}/g, () => nombres[Math.floor(azar() * nombres.length)]);
   const ronda: Ronda = {
     numero: indice + 1,
     tipo: paso.tipo,
@@ -183,8 +196,35 @@ function empezarRonda(p: Partida, indice: number, azar: Azar): Partida {
     votos: {},
     puntosRonda: {},
     dobles: indice === p.plan.length - 1 && p.plan.length > 1,
+    minijuego: paso.minijuego ?? null,
+    orden: [],
+    lugar: {},
   };
-  return { ...p, fase: 'escribir', ronda };
+  return { ...p, fase: paso.tipo === 'minijuego' ? 'minijuego' : 'escribir', ronda };
+}
+
+/** Cierra un minijuego: reparte puntos según el puesto y pasa a mostrar el resultado. */
+/** `puestos` va de mejor a peor; cada grupo son jugadores empatados, que se llevan los puntos del mismo puesto. */
+export function resultadoMinijuego(p: Partida, puestos: string[][]): Partida {
+  const r = p.ronda;
+  if (p.fase !== 'minijuego' || !r) return p;
+  const mult = r.dobles ? 2 : 1;
+  const ganados: Record<string, number> = {};
+  const lugar: Record<string, number> = {};
+  let antes = 0;
+  for (const grupo of puestos) {
+    for (const id of grupo) {
+      lugar[id] = antes + 1;
+      ganados[id] = (PUNTOS_PUESTO[antes] ?? 0) * mult;
+    }
+    antes += grupo.length;
+  }
+  return {
+    ...p,
+    fase: 'revelar',
+    ronda: { ...r, orden: puestos.flat(), lugar, puntosRonda: ganados },
+    jugadores: p.jugadores.map((j) => ({ ...j, puntos: j.puntos + (ganados[j.id] ?? 0) })),
+  };
 }
 
 export function responder(p: Partida, id: string, texto: string): Partida {

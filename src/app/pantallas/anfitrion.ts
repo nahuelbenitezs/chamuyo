@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import QRCode from 'qrcode';
 import { contenidoEn } from '../contenido/en';
@@ -21,6 +21,7 @@ import {
   puedenVotar,
   puntosPorOpcion,
   puntuar,
+  resultadoMinijuego,
   quitarJugador,
   ranking,
   responder,
@@ -29,7 +30,9 @@ import {
 } from '../juego/motor';
 import { colorDe, imagen, partesConsigna } from '../juego/personajes';
 import { contar } from '../juego/analitica';
-import { idJefe, MsgJugador, resumen, vistaPara } from '../juego/protocolo';
+import { dibujar, Recursos } from '../minijuegos/dibujo';
+import { crear, Entrada, EstadoMinijuego, paso as pasoMinijuego, puestos } from '../minijuegos/juegos';
+import { EtapaMinijuego, idJefe, MsgJugador, resumen, vistaPara } from '../juego/protocolo';
 import { compartirTarjeta } from '../juego/tarjeta';
 import { Anfitrion } from '../juego/red';
 import { alternarSonido, sfx, sonidoActivo } from '../juego/sonido';
@@ -64,6 +67,37 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   protected paso = signal(-1);
   protected copiado = signal(false);
   protected compartiendo = signal(false);
+  protected etapaMinijuego = signal<EtapaMinijuego>('intro');
+  protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'minijuegos'];
+  private lienzo = viewChild<ElementRef<HTMLCanvasElement>>('lienzo');
+  private estadoMj: EstadoMinijuego | null = null;
+  private entradas: Record<string, Entrada> = {};
+  private cuadro: number | null = null;
+  private ultimoCuadro = 0;
+  private imagenes = new Map<string, HTMLImageElement>();
+  private recursos: Recursos = {
+    avatar: (id) => this.imagenDe(imagen(this.avatarDe(id))),
+    nombre: (id) => this.nombreDe(id),
+    color: (id) => colorDe(this.avatarDe(id)),
+    empanada: this.imagenDe('arte/personajes/empanada.webp'),
+    textos: {
+      get esperaYa() {
+        return t().esperaYa;
+      },
+      get ya() {
+        return t().ya;
+      },
+      get nadie() {
+        return t().nadie;
+      },
+      get ganoSub() {
+        return t().ganoSub;
+      },
+      get afuera() {
+        return t().afuera;
+      },
+    },
+  };
 
   private red = new Anfitrion({
     abierta: (codigo) => this.alAbrir(codigo),
@@ -81,6 +115,10 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   protected ronda = computed(() => this.partida().ronda);
   protected jugadores = computed(() => this.partida().jugadores);
   protected ordenados = computed(() => ranking(this.partida()));
+  protected empate = computed(() => {
+    const o = this.ordenados();
+    return o.length > 1 && o[0].puntos === o[1].puntos;
+  });
   protected vacios = computed(() =>
     Array.from({ length: Math.max(0, MAX_JUGADORES - this.jugadores().length) }, (_, i) => i),
   );
@@ -110,7 +148,18 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     void this.mantenerPantalla();
   }
 
+  protected nombreModo(m: Modo): string {
+    const x = t();
+    return { mixto: x.modoMixto, chamuyo: x.modoChamuyo, ocurrencias: x.modoOcurrencias, minijuegos: x.modoMinijuegos }[m];
+  }
+
+  protected descModo(m: Modo): string {
+    const x = t();
+    return { mixto: x.modoMixtoDesc, chamuyo: x.modoChamuyoDesc, ocurrencias: x.modoOcurrenciasDesc, minijuegos: x.modoMinijuegosDesc }[m];
+  }
+
   ngOnDestroy(): void {
+    this.detenerCuadros();
     this.red.cerrar();
     if (this.reloj) clearInterval(this.reloj);
     this.cancelar();
@@ -171,7 +220,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     const contenido = idioma() === 'es' ? contenidoEs : contenidoEn;
     const usados = leerUsados();
     const nueva = iniciar(p, modo, this.rondas(), contenido, Math.random, usados);
-    guardarUsados([...usados, ...nueva.plan.map(claveDe)]);
+    guardarUsados([...usados, ...nueva.plan.filter((x) => x.tipo !== 'minijuego').map(claveDe)]);
     this.partida.set(nueva);
     contar(`partida-empezada/${modo}`);
     this.entrarEscribir();
@@ -190,6 +239,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
 
   protected jugarOtra(): void {
     this.cancelar();
+    this.detenerCuadros();
     this.partida.update(volverAlLobby);
     this.paso.set(-1);
     this.difundir();
@@ -238,6 +288,13 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
       case 'empezar':
         if (idJefe(p) === id) this.empezar(msg.modo);
         return;
+      case 'mando':
+        this.entrada(id).x = Math.max(-1, Math.min(1, Number(msg.x) || 0));
+        this.entrada(id).y = Math.max(-1, Math.min(1, Number(msg.y) || 0));
+        return;
+      case 'toque':
+        this.entrada(id).toques += 1;
+        return;
       case 'otra':
         if (idJefe(p) === id && p.fase === 'final') this.jugarOtra();
         return;
@@ -259,7 +316,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   private difundir(): void {
     const p = this.partida();
     const restante = this.restante();
-    for (const [conexion, id] of this.jugadorDe) this.red.enviar(conexion, vistaPara(p, id, restante));
+    for (const [conexion, id] of this.jugadorDe) this.red.enviar(conexion, vistaPara(p, id, restante, this.etapaMinijuego()));
   }
 
   // ---- ritmo de la partida ----
@@ -267,6 +324,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   private entrarEscribir(): void {
     const r = this.partida().ronda;
     if (!r) return this.terminar();
+    if (r.tipo === 'minijuego') return this.entrarMinijuego();
     this.paso.set(-1);
     this.fin.set(Date.now() + (r.tipo === 'chamuyo' ? TIEMPO.chamuyo : TIEMPO.ocurrencias));
     this.programar(() => this.cerrarEscritura(), this.restante());
@@ -320,6 +378,78 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
       if (this.partida().fase === 'final') this.terminar();
       else this.entrarEscribir();
     }, TIEMPO.tabla);
+  }
+
+  // ---- minijuegos ----
+
+  private entrarMinijuego(): void {
+    this.paso.set(-1);
+    this.fin.set(0);
+    this.etapaMinijuego.set('intro');
+    this.estadoMj = null;
+    sfx.fase();
+    this.difundir();
+    this.programar(() => this.comenzarMinijuego(), 4500);
+  }
+
+  private comenzarMinijuego(): void {
+    const r = this.partida().ronda;
+    if (!r?.minijuego) return;
+    const ids = this.jugadores().filter((j) => j.conectado).map((j) => j.id);
+    this.estadoMj = crear(r.minijuego, ids, Math.random);
+    this.entradas = {};
+    this.etapaMinijuego.set('jugando');
+    sfx.fase();
+    this.difundir();
+    this.ultimoCuadro = performance.now();
+    this.cuadro = requestAnimationFrame((ahora) => this.avanzarCuadro(ahora));
+  }
+
+  private avanzarCuadro(ahora: number): void {
+    const e = this.estadoMj;
+    if (!e) return;
+    const dt = Math.min(0.05, (ahora - this.ultimoCuadro) / 1000);
+    this.ultimoCuadro = ahora;
+    const antes = e.id === 'ahora' ? e.etapa : null;
+    const vivosAntes = e.id === 'empanadas' ? e.ids.filter((id) => e.eliminado[id] === null).length : 0;
+    pasoMinijuego(e, dt, this.entradas, Math.random);
+    for (const entrada of Object.values(this.entradas)) entrada.toques = 0;
+    if (e.id === 'ahora' && antes !== e.etapa && e.etapa === 'ya') sfx.verdad();
+    if (e.id === 'empanadas' && e.ids.filter((id) => e.eliminado[id] === null).length < vivosAntes) sfx.revela();
+    const ctx = this.lienzo()?.nativeElement.getContext('2d');
+    if (ctx) dibujar(ctx, e, this.recursos);
+    if (e.fin) this.terminarMinijuego();
+    else this.cuadro = requestAnimationFrame((t2) => this.avanzarCuadro(t2));
+  }
+
+  private terminarMinijuego(): void {
+    this.detenerCuadros();
+    if (!this.estadoMj) return;
+    const final = puestos(this.estadoMj);
+    this.partida.update((p) => resultadoMinijuego(p, final));
+    this.etapaMinijuego.set('resultado');
+    sfx.fanfarria();
+    this.difundir();
+    this.programar(() => this.mostrarTabla(), 5000);
+  }
+
+  private detenerCuadros(): void {
+    if (this.cuadro !== null) cancelAnimationFrame(this.cuadro);
+    this.cuadro = null;
+  }
+
+  private entrada(id: string): Entrada {
+    return (this.entradas[id] ??= { x: 0, y: 0, toques: 0 });
+  }
+
+  private imagenDe(src: string): HTMLImageElement {
+    let im = this.imagenes.get(src);
+    if (!im) {
+      im = new Image();
+      im.src = src;
+      this.imagenes.set(src, im);
+    }
+    return im;
   }
 
   private terminar(): void {

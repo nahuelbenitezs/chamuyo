@@ -61,10 +61,10 @@
 
             <div class="config">
               <div class="grupo" role="radiogroup" [attr.aria-label]="t().modo">
-                @for (m of ['mixto', 'chamuyo', 'ocurrencias']; track m) {
-                  <button type="button" class="opcion-modo" role="radio" [attr.aria-checked]="modo() === m" (click)="modo.set($any(m))">
-                    <b>{{ m === 'mixto' ? t().modoMixto : m === 'chamuyo' ? t().modoChamuyo : t().modoOcurrencias }}</b>
-                    <small>{{ m === 'mixto' ? t().modoMixtoDesc : m === 'chamuyo' ? t().modoChamuyoDesc : t().modoOcurrenciasDesc }}</small>
+                @for (m of modos; track m) {
+                  <button type="button" class="opcion-modo" role="radio" [attr.aria-checked]="modo() === m" (click)="modo.set(m)">
+                    <b>{{ nombreModo(m) }}</b>
+                    <small>{{ descModo(m) }}</small>
                   </button>
                 }
               </div>
@@ -159,8 +159,50 @@
         }
       }
 
+      @case ('minijuego') {
+        @if (ronda(); as r) {
+          <section class="arena">
+            <div class="ronda-cabeza">
+              <span class="chip">{{ r.dobles ? t().final : t().minijuego + ' ' + r.numero + ' ' + t().de + ' ' + partida().totalRondas }}</span>
+              <span class="chip tipo">{{ t().juegos[r.minijuego!].nombre }}</span>
+              @if (r.dobles) {
+                <span class="chip dobles">{{ t().puntosDobles }}</span>
+              }
+            </div>
+            <div class="lienzo-marco">
+              <canvas #lienzo width="1280" height="720" [attr.aria-label]="t().juegos[r.minijuego!].nombre"></canvas>
+              @if (etapaMinijuego() === 'intro') {
+                <div class="intro-minijuego">
+                  <h1 class="titular intro-nombre">{{ t().juegos[r.minijuego!].nombre }}</h1>
+                  <p class="intro-como">{{ t().juegos[r.minijuego!].como }}</p>
+                  <p class="cuenta titular" aria-hidden="true">
+                    <span>3</span><span>2</span><span>1</span>
+                  </p>
+                </div>
+              }
+            </div>
+          </section>
+        }
+      }
+
       @case ('revelar') {
         @if (ronda(); as r) {
+          @if (r.tipo === 'minijuego') {
+          <section class="tabla">
+            <h1 class="titular tabla-titulo">{{ t().juegos[r.minijuego!].nombre }}</h1>
+            <ol class="posiciones">
+              @for (id of r.orden; track id; let i = $index) {
+                <li [style.animation-delay.ms]="i * 120">
+                  <span class="lugar titular">{{ r.lugar[id] }}</span>
+                  <img class="avatar" [src]="imagen(avatarDe(id))" [alt]="nombreDe(id)" />
+                  <span class="nombre">{{ nombreDe(id) }}</span>
+                  <span></span>
+                  <span class="total titular sumados">+{{ r.puntosRonda[id] ?? 0 }}</span>
+                </li>
+              }
+            </ol>
+          </section>
+          } @else {
           <section class="ronda">
             <p class="consigna-chica">
               @for (parte of partes(r.consigna); track $index) {
@@ -210,6 +252,7 @@
               </p>
             }
           </section>
+          }
         }
       }
 
@@ -234,7 +277,7 @@
         <section class="final-pantalla">
           @if (ordenados()[0]; as ganador) {
             <p class="corona"><img class="avatar enorme" [src]="imagen(ganador.avatar, 'grande')" [alt]="ganador.nombre" /></p>
-            <h1 class="titular ganador">{{ ganador.nombre }} {{ t().gano }}</h1>
+            <h1 class="titular ganador">{{ empate() ? t().empate : ganador.nombre + ' ' + t().gano }}</h1>
           }
           <ol class="podio">
             @for (j of ordenados().slice(0, 3); track j.id; let i = $index) {

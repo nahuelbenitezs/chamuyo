@@ -1,3 +1,4 @@
+import { Control, CONTROL, IdMinijuego } from '../minijuegos/juegos';
 import { faltanResponder, Modo, opcionesPara, Partida, ranking, TipoRonda } from './motor';
 
 /** Mensajes que manda un celular a la pantalla anfitriona. */
@@ -6,7 +7,13 @@ export type MsgJugador =
   | { t: 'responder'; texto: string }
   | { t: 'votar'; opcion: string }
   | { t: 'empezar'; modo: Modo }
-  | { t: 'otra' };
+  | { t: 'otra' }
+  /** Joystick de los minijuegos: x e y entre -1 y 1. */
+  | { t: 'mando'; x: number; y: number }
+  /** Un toque del botón de los minijuegos. */
+  | { t: 'toque' };
+
+export type EtapaMinijuego = 'intro' | 'jugando' | 'resultado';
 
 /** Lo que tiene que mostrar cada celular. `restante` va en milisegundos. */
 export type Vista =
@@ -17,7 +24,8 @@ export type Vista =
   | { v: 'acerto'; consigna: string }
   | { v: 'votar'; tipo: TipoRonda; consigna: string; opciones: Array<{ id: string; texto: string }>; elegido: string | null; restante: number }
   | { v: 'mirar'; motivo: 'votando' | 'revelando' | 'tabla' | 'sin-opciones' }
-  | { v: 'final'; puesto: number; puntos: number; jefe: boolean; ganador: string; resumen: Resumen };
+  | { v: 'final'; puesto: number; puntos: number; jefe: boolean; ganador: string; empate: boolean; resumen: Resumen }
+  | { v: 'control'; juego: IdMinijuego; control: Control; etapa: EtapaMinijuego; puesto: number | null; ganados: number };
 
 /** Lo necesario para dibujar la tarjeta para compartir al final de la partida. */
 export interface Resumen {
@@ -50,7 +58,7 @@ export function idJefe(p: Partida): string | null {
   return p.jugadores.find((j) => j.conectado)?.id ?? null;
 }
 
-export function vistaPara(p: Partida, id: string, restante: number): Vista {
+export function vistaPara(p: Partida, id: string, restante: number, etapa: EtapaMinijuego = 'intro'): Vista {
   const yo = p.jugadores.find((j) => j.id === id);
   if (!yo) return p.fase === 'lobby' ? { v: 'lleno' } : { v: 'empezada' };
   const jefe = idJefe(p) === id;
@@ -77,7 +85,20 @@ export function vistaPara(p: Partida, id: string, restante: number): Vista {
       if (!opciones.length) return { v: 'mirar', motivo: 'sin-opciones' };
       return { v: 'votar', tipo: r!.tipo, consigna: r!.consigna, opciones, elegido: r!.votos[id] ?? null, restante };
     }
+    case 'minijuego':
+      return { v: 'control', juego: r!.minijuego!, control: CONTROL[r!.minijuego!], etapa, puesto: null, ganados: 0 };
     case 'revelar':
+      if (r!.tipo === 'minijuego') {
+        const puesto = r!.lugar[id];
+        return {
+          v: 'control',
+          juego: r!.minijuego!,
+          control: CONTROL[r!.minijuego!],
+          etapa: 'resultado',
+          puesto: puesto ?? null,
+          ganados: r!.puntosRonda[id] ?? 0,
+        };
+      }
       return { v: 'mirar', motivo: 'revelando' };
     case 'tabla':
       return { v: 'mirar', motivo: 'tabla' };
@@ -85,10 +106,12 @@ export function vistaPara(p: Partida, id: string, restante: number): Vista {
       const orden = ranking(p);
       return {
         v: 'final',
-        puesto: orden.findIndex((j) => j.id === id) + 1,
+        // Con los mismos puntos se comparte el puesto.
+        puesto: 1 + orden.filter((j) => j.puntos > yo.puntos).length,
         puntos: yo.puntos,
         jefe,
         ganador: orden[0]?.nombre ?? '',
+        empate: orden.length > 1 && orden[0].puntos === orden[1].puntos,
         resumen: resumen(p),
       };
     }

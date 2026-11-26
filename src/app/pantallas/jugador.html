@@ -61,9 +61,9 @@
             @if (v.jefe) {
               <p>{{ t().sosElJefe }}</p>
               <div class="modos" role="radiogroup">
-                @for (m of ['mixto', 'chamuyo', 'ocurrencias']; track m) {
-                  <button type="button" class="modo" role="radio" [attr.aria-checked]="modoElegido() === m" (click)="modoElegido.set($any(m))">
-                    {{ m === 'mixto' ? t().modoMixto : m === 'chamuyo' ? t().modoChamuyo : t().modoOcurrencias }}
+                @for (m of modos; track m) {
+                  <button type="button" class="modo" role="radio" [attr.aria-checked]="modoElegido() === m" (click)="modoElegido.set(m)">
+                    {{ nombreModo(m) }}
                   </button>
                 }
               </div>
@@ -134,6 +134,44 @@
             }
           </section>
         }
+        @case ('control') {
+          <section class="control" [style.--color]="colorDe(avatar())">
+            @if (v.etapa === 'resultado') {
+              <div class="mensaje">
+                <img class="avatar grande" [src]="imagen(avatar(), 'grande')" alt="" />
+                @if (v.puesto) {
+                  <p class="puesto titular" [attr.aria-label]="t().quedaste(v.puesto)">{{ v.puesto }}°</p>
+                }
+                <p class="ganados titular">{{ t().sumaste(v.ganados) }}</p>
+              </div>
+            } @else {
+              <div class="control-cabeza">
+                <p class="control-juego titular">{{ t().juegos[v.juego].nombre }}</p>
+                @if (v.etapa === 'intro') {
+                  <p class="control-como">{{ t().juegos[v.juego].como }}</p>
+                  <p class="tenue">{{ t().preparate }}</p>
+                } @else {
+                  <p class="tenue"><i class="ph-bold ph-television-simple"></i> {{ t().mirarTele }}</p>
+                }
+              </div>
+              @if (v.control === 'boton') {
+                <button type="button" class="pulsador titular" [disabled]="v.etapa !== 'jugando'"
+                  (pointerdown)="tocar($event)" (contextmenu)="$event.preventDefault()">
+                  {{ t().toca }}
+                </button>
+              } @else {
+                <div class="palanca" [class.activa]="v.etapa === 'jugando'" [attr.aria-label]="t().juegos[v.juego].como"
+                  (pointerdown)="v.etapa === 'jugando' && agarrarPalanca($event)" (pointermove)="moverPalanca($event)"
+                  (pointerup)="soltarPalanca()" (pointercancel)="soltarPalanca()" (lostpointercapture)="soltarPalanca()"
+                  (contextmenu)="$event.preventDefault()">
+                  <div class="base">
+                    <div class="perilla" [style.--x]="palanca().x" [style.--y]="palanca().y"></div>
+                  </div>
+                </div>
+              }
+            }
+          </section>
+        }
         @case ('mirar') {
           <section class="mensaje"><i class="ph-bold ph-television-simple tele"></i><p>{{ t().mira }}</p></section>
         }
@@ -141,7 +179,7 @@
           <section class="mensaje">
             <p class="puesto titular">{{ v.puesto }}°</p>
             <p>{{ t().terminaste }} {{ v.puesto }}° {{ t().puesto }} {{ t().conPuntos }} <b>{{ v.puntos }}</b> {{ t().pts }}</p>
-            <p class="tenue">{{ t().ganoNombre }} {{ v.ganador }}</p>
+            <p class="tenue">{{ v.empate ? t().empate : t().ganoNombre + ' ' + v.ganador }}</p>
             <button class="boton ancho" type="button" (click)="compartir(v.resumen)" [disabled]="compartiendo()">
               <i class="ph-bold ph-share-network"></i> {{ compartiendo() ? t().preparando : t().compartirResultado }}
             </button>
