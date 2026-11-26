@@ -69,7 +69,7 @@ export type EstadoMinijuego = EstadoMate | EstadoAhora | EstadoEmpanadas | Estad
 
 export const MATE = { porToque: 1.5, duracion: 25 };
 export const AHORA = { subrondas: 3, esperaMin: 1.5, esperaVar: 2.5, ventana: 3, pausa: 1.6 };
-export const EMPANADAS = { duracion: 40, piso: 640, velocidad: 760, radioJugador: 34, radioObjeto: 36 };
+export const EMPANADAS = { duracion: 40, piso: 612, velocidad: 760, radioJugador: 34, radioObjeto: 36 };
 export const PATIO = { duracion: 30, columnas: 32, filas: 18, velocidad: 380 };
 const CELDA = ANCHO / PATIO.columnas;
 

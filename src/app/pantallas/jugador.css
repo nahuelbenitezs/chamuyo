@@ -416,6 +416,13 @@
   color: var(--color);
 }
 
+.control-icono {
+  justify-self: center;
+  width: 9rem;
+  height: auto;
+  filter: drop-shadow(0 6px 0 rgb(0 0 0 / 0.35));
+}
+
 .control-como {
   max-width: 30ch;
   line-height: 1.4;

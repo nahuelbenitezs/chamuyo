@@ -148,6 +148,7 @@
               <div class="control-cabeza">
                 <p class="control-juego titular">{{ t().juegos[v.juego].nombre }}</p>
                 @if (v.etapa === 'intro') {
+                  <img class="control-icono" [src]="'arte/minijuegos/' + v.juego + '.webp'" alt="" width="360" height="360" />
                   <p class="control-como">{{ t().juegos[v.juego].como }}</p>
                   <p class="tenue">{{ t().preparate }}</p>
                 } @else {

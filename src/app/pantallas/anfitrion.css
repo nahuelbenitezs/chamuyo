@@ -510,6 +510,13 @@
   text-align: center;
 }
 
+.intro-icono {
+  width: clamp(7rem, 22%, 15rem);
+  height: auto;
+  filter: drop-shadow(0 8px 0 rgb(0 0 0 / 0.35));
+  animation: rebote 0.7s var(--ease) both;
+}
+
 .intro-nombre {
   margin: 0;
   font-size: clamp(2.6rem, 6vw, 5.5rem);

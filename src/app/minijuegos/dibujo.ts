@@ -5,7 +5,9 @@ export interface Recursos {
   avatar(id: string): HTMLImageElement | undefined;
   nombre(id: string): string;
   color(id: string): string;
-  empanada: HTMLImageElement;
+  /** Empanadas sin cara que caen; cada una usa una de estas vistas. */
+  empanadas: HTMLImageElement[];
+  fondos: { empanadas: HTMLImageElement; patio: HTMLImageElement };
   textos: { esperaYa: string; ya: string; nadie: string; ganoSub: string; afuera: string };
 }
 
@@ -23,7 +25,7 @@ function avatar(ctx: CanvasRenderingContext2D, r: Recursos, id: string, x: numbe
     ctx.globalAlpha = 0.35;
     ctx.filter = 'grayscale(1)';
   }
-  if (im?.complete) ctx.drawImage(im, x - lado / 2, y - lado / 2, lado, lado);
+  if (lista(im)) ctx.drawImage(im, x - lado / 2, y - lado / 2, lado, lado);
   else {
     ctx.fillStyle = r.color(id);
     ctx.beginPath();
@@ -33,14 +35,27 @@ function avatar(ctx: CanvasRenderingContext2D, r: Recursos, id: string, x: numbe
   ctx.restore();
 }
 
+function lista(im: HTMLImageElement | undefined): im is HTMLImageElement {
+  return !!im && im.complete && im.naturalWidth > 0;
+}
+
+/** Texto con contorno oscuro, para que se lea arriba de cualquier fondo. */
+function rotulo(ctx: CanvasRenderingContext2D, texto: string, x: number, y: number, color: string): void {
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(19, 18, 21, 0.9)';
+  ctx.strokeText(texto, x, y);
+  ctx.fillStyle = color;
+  ctx.fillText(texto, x, y);
+}
+
 function reloj(ctx: CanvasRenderingContext2D, e: EstadoMinijuego): void {
   const s = restante(e);
   if (s === null) return;
   fuente(ctx, 900, 56);
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
-  ctx.fillStyle = s <= 5 ? COLOR.mentira : COLOR.tenue;
-  ctx.fillText(String(Math.ceil(s)), ANCHO - 28, 18);
+  rotulo(ctx, String(Math.ceil(s)), ANCHO - 28, 18, s <= 5 ? COLOR.mentira : COLOR.texto);
 }
 
 export function dibujar(ctx: CanvasRenderingContext2D, e: EstadoMinijuego, r: Recursos): void {
@@ -142,41 +157,47 @@ function dibujarAhora(ctx: CanvasRenderingContext2D, e: Extract<EstadoMinijuego,
 }
 
 function dibujarEmpanadas(ctx: CanvasRenderingContext2D, e: Extract<EstadoMinijuego, { id: 'empanadas' }>, r: Recursos): void {
-  // Cielo con un degradé suave y el piso.
-  const cielo = ctx.createLinearGradient(0, 0, 0, ALTO);
-  cielo.addColorStop(0, '#1b1a2a');
-  cielo.addColorStop(1, '#131215');
-  ctx.fillStyle = cielo;
-  ctx.fillRect(0, 0, ANCHO, ALTO);
-  ctx.fillStyle = '#2a2530';
-  ctx.fillRect(0, EMPANADAS.piso + 40, ANCHO, ALTO);
-  ctx.fillStyle = COLOR.acento;
-  ctx.fillRect(0, EMPANADAS.piso + 40, ANCHO, 4);
+  // Patio de noche con la parrilla; las baldosas del piso empiezan a la altura de los pies.
+  if (lista(r.fondos.empanadas)) ctx.drawImage(r.fondos.empanadas, 0, 0, ANCHO, ALTO);
+  else {
+    const cielo = ctx.createLinearGradient(0, 0, 0, ALTO);
+    cielo.addColorStop(0, '#1b1a2a');
+    cielo.addColorStop(1, '#131215');
+    ctx.fillStyle = cielo;
+    ctx.fillRect(0, 0, ANCHO, ALTO);
+    ctx.fillStyle = '#2a2530';
+    ctx.fillRect(0, EMPANADAS.piso + 45, ANCHO, ALTO);
+  }
   for (const o of e.objetos) {
+    // Cada empanada mantiene su vista mientras cae: sale de dónde apareció.
+    const im = r.empanadas[Math.floor(o.x) % r.empanadas.length];
+    if (!lista(im)) continue;
     ctx.save();
     ctx.translate(o.x, o.y);
     ctx.rotate(o.giro);
-    if (r.empanada.complete) ctx.drawImage(r.empanada, -40, -40, 80, 80);
+    ctx.drawImage(im, -44, -44, 88, 88);
     ctx.restore();
   }
+  fuente(ctx, 800, 20);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
   for (const id of e.ids) {
     const fuera = e.eliminado[id] !== null;
-    avatar(ctx, r, id, e.x[id], EMPANADAS.piso, 84, fuera);
-    fuente(ctx, 800, 20);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = fuera ? COLOR.tenue : COLOR.texto;
-    ctx.fillText(r.nombre(id), e.x[id], EMPANADAS.piso + 50);
+    avatar(ctx, r, id, e.x[id], EMPANADAS.piso, 92, fuera);
+    rotulo(ctx, r.nombre(id), e.x[id], EMPANADAS.piso + 52, fuera ? COLOR.tenue : COLOR.texto);
   }
 }
 
 function dibujarPatio(ctx: CanvasRenderingContext2D, e: Extract<EstadoMinijuego, { id: 'patio' }>, r: Recursos): void {
   const lado = ANCHO / PATIO.columnas;
+  // Baldosas casi grises (vienen así de fábrica) para que la pintura resalte.
+  if (lista(r.fondos.patio)) ctx.drawImage(r.fondos.patio, 0, 0, ANCHO, ALTO);
   for (let f = 0; f < PATIO.filas; f++) {
     for (let c = 0; c < PATIO.columnas; c++) {
       const duenio = e.celdas[f * PATIO.columnas + c];
+      if (!duenio && lista(r.fondos.patio)) continue;
       ctx.fillStyle = duenio ? r.color(duenio) : (f + c) % 2 ? '#1a191e' : '#1e1d22';
-      ctx.globalAlpha = duenio ? 0.8 : 1;
+      ctx.globalAlpha = duenio ? 0.85 : 1;
       ctx.fillRect(c * lado, f * lado, lado - 1, lado - 1);
     }
   }

@@ -326,7 +326,7 @@
   width: min(1240px, 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: clamp(12px, 2vw, 24px);
   padding: clamp(24px, 4vw, 48px) clamp(16px, 3vw, 40px);
 }
@@ -353,7 +353,7 @@
 
 .modo h3 {
   margin: 0 0 0.75rem;
-  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-size: clamp(2rem, 3.2vw, 2.9rem);
 }
 
 .modo p {
@@ -375,6 +375,30 @@
     var(--superficie-2);
   box-shadow: 0 10px 0 #09080b;
   rotate: 0.8deg;
+}
+
+.modo.minijuegos {
+  background:
+    radial-gradient(circle at 80% 15%, rgb(255 255 255 / 0.25), transparent 45%),
+    #74c0fc;
+  color: #0b2233;
+  box-shadow: 0 10px 0 #2f6f9e;
+  rotate: -0.6deg;
+}
+
+/* Con dos columnas, Minijuegos ocupa toda la fila de abajo. */
+@media (max-width: 1100px) {
+  .modos {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .modo.minijuegos {
+    grid-column: 1 / -1;
+  }
+
+  .modo.minijuegos img {
+    width: min(100%, 18rem);
+  }
 }
 
 /* ---- cierre ---- */

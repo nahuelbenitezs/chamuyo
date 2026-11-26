@@ -79,7 +79,11 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     avatar: (id) => this.imagenDe(imagen(this.avatarDe(id))),
     nombre: (id) => this.nombreDe(id),
     color: (id) => colorDe(this.avatarDe(id)),
-    empanada: this.imagenDe('arte/personajes/empanada.webp'),
+    empanadas: [1, 2, 3, 4].map((i) => this.imagenDe(`arte/minijuegos/empanada-${i}.webp`)),
+    fondos: {
+      empanadas: this.imagenDe('arte/minijuegos/fondo-empanadas.webp'),
+      patio: this.imagenDe('arte/minijuegos/fondo-patio.webp'),
+    },
     textos: {
       get esperaYa() {
         return t().esperaYa;

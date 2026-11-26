@@ -5,7 +5,7 @@ Uso: python scripts/recortar-arte.py   (necesita pillow, numpy y scipy)
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance
 from scipy import ndimage
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -88,6 +88,51 @@ def sin_fondo_oscuro(im: Image.Image) -> Image.Image:
     return sticker.crop(sticker.getbbox())
 
 
+def sin_fondo_blanco(im: Image.Image, umbral: int = 252, troquel: int = 0) -> Image.Image:
+    """Quita el fondo blanco de una hoja de ChatGPT y devuelve la hoja con transparencia.
+
+    Sin `troquel`, la silueta sale del aro gris que rodea al borde blanco de cada sticker.
+    Con `troquel`, el borde blanco se arma de nuevo a esa distancia del dibujo, para hojas
+    donde el aro es tan tenue que tiene huecos.
+    """
+    rgba = np.array(im.convert("RGBA"))
+    if troquel:
+        tinta = rgba[..., :3].min(axis=2) < 200
+        silueta = ndimage.binary_fill_holes(ndimage.distance_transform_edt(~tinta) <= troquel)
+    else:
+        tinta = ndimage.binary_closing(rgba[..., :3].min(axis=2) < umbral, iterations=4)
+        silueta = ndimage.binary_fill_holes(tinta)
+    # Afuera quedan manchitas de ruido: solo cuentan las piezas grandes.
+    etiquetas, total = ndimage.label(silueta)
+    areas = ndimage.sum(silueta, etiquetas, range(1, total + 1))
+    silueta = np.isin(etiquetas, [i + 1 for i, area in enumerate(areas) if area > 3000])
+    rgba[..., 3] = np.where(silueta, 255, 0)
+    if troquel:
+        rgba[..., :3] = np.where((silueta & ~ndimage.binary_dilation(tinta, iterations=2))[..., None], 255, rgba[..., :3])
+    return Image.fromarray(rgba)
+
+
+def minijuegos() -> None:
+    """Arte del modo Minijuegos: tarjeta del inicio, íconos de cada juego, empanadas que caen y fondos."""
+    carpeta = SALIDA / "minijuegos"
+    carpeta.mkdir(exist_ok=True)
+    modo = sin_fondo_blanco(Image.open(ARTE / "modo-minijuegos.webp"), troquel=26)
+    cuadrado(modo.crop(modo.getbbox()), 640).save(SALIDA / "modo-minijuegos.webp", quality=88)
+    iconos = recortes(sin_fondo_blanco(Image.open(ARTE / "iconos-minijuegos.webp")), columnas=2, filas=2)
+    for nombre, pieza in zip(["mate", "ahora", "empanadas", "patio"], iconos):
+        cuadrado(pieza, 360).save(carpeta / f"{nombre}.webp", quality=88)
+    empanadas = recortes(sin_fondo_blanco(Image.open(ARTE / "empanadas-sueltas.webp"), umbral=240), columnas=2, filas=2)
+    for i, pieza in enumerate(empanadas, 1):
+        cuadrado(pieza, 128).save(carpeta / f"empanada-{i}.webp", quality=90)
+    fondo = Image.open(ARTE / "fondo-empanadas.webp").convert("RGB").resize((1280, 720), Image.LANCZOS)
+    fondo.save(carpeta / "fondo-empanadas.webp", quality=80)
+    # El piso del patio va casi gris y oscuro: la pintura de cada jugador tiene que resaltar,
+    # y varios personajes son naranjas como las baldosas.
+    patio = Image.open(ARTE / "fondo-patio.webp").convert("RGB").resize((1280, 720), Image.LANCZOS)
+    patio = ImageEnhance.Brightness(ImageEnhance.Color(patio).enhance(0.2)).enhance(0.5)
+    patio.save(carpeta / "fondo-patio.webp", quality=80)
+
+
 def main() -> None:
     (SALIDA / "personajes").mkdir(parents=True, exist_ok=True)
     hojas = (
@@ -133,6 +178,7 @@ def main() -> None:
     # Los círculos se tocan entre sí: se cortan por grilla.
     for i, pieza in enumerate(recortes(Image.open(ARTE / "instagram-destacados.webp"), columnas=5, filas=1), 1):
         cuadrado(pieza, 1080).save(ARTE / "instagram" / f"destacado-{i}.png")
+    minijuegos()
     print("listo:", sorted(p.name for p in (SALIDA / "personajes").iterdir())[:4], "...")
 
 
