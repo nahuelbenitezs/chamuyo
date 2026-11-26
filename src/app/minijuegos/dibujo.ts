@@ -29,7 +29,9 @@ export interface Recursos {
   color(id: string): string;
   /** Empanadas sin cara que caen; cada una usa una de estas vistas. */
   empanadas: HTMLImageElement[];
-  fondos: { empanadas: HTMLImageElement; patio: HTMLImageElement };
+  fondos: { empanadas: HTMLImageElement; patio: HTMLImageElement; papa: HTMLImageElement; serpentina: HTMLImageElement };
+  /** La papa caliente con su mecha. */
+  papa: HTMLImageElement;
   /** Hay una escena 3D detrás del lienzo: solo se dibuja lo de arriba (reloj y carteles). */
   capa3d: boolean;
   textos: {
@@ -319,21 +321,24 @@ function dibujarAgua(ctx: CanvasRenderingContext2D, e: EstadoAgua, r: Recursos):
 }
 
 function dibujarPapa(ctx: CanvasRenderingContext2D, e: EstadoPapa, r: Recursos): void {
-  // Potrero: franjas de pasto y las líneas de la cancha.
-  for (let x = 0; x < ANCHO; x += 80) {
-    ctx.fillStyle = (x / 80) % 2 ? '#1f3f27' : '#1b3722';
-    ctx.fillRect(x, 0, 80, ALTO);
+  // Potrero con las mochilas de arco; sin la imagen, franjas de pasto y líneas de cancha.
+  if (lista(r.fondos.papa)) ctx.drawImage(r.fondos.papa, 0, 0, ANCHO, ALTO);
+  else {
+    for (let x = 0; x < ANCHO; x += 80) {
+      ctx.fillStyle = (x / 80) % 2 ? '#1f3f27' : '#1b3722';
+      ctx.fillRect(x, 0, 80, ALTO);
+    }
+    ctx.strokeStyle = 'rgba(243, 242, 238, 0.22)';
+    ctx.lineWidth = 5;
+    ctx.strokeRect(30, 30, ANCHO - 60, ALTO - 60);
+    ctx.beginPath();
+    ctx.moveTo(ANCHO / 2, 30);
+    ctx.lineTo(ANCHO / 2, ALTO - 30);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(ANCHO / 2, ALTO / 2, 90, 0, Math.PI * 2);
+    ctx.stroke();
   }
-  ctx.strokeStyle = 'rgba(243, 242, 238, 0.22)';
-  ctx.lineWidth = 5;
-  ctx.strokeRect(30, 30, ANCHO - 60, ALTO - 60);
-  ctx.beginPath();
-  ctx.moveTo(ANCHO / 2, 30);
-  ctx.lineTo(ANCHO / 2, ALTO - 30);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(ANCHO / 2, ALTO / 2, 90, 0, Math.PI * 2);
-  ctx.stroke();
   // Marcas de los que ya explotaron.
   for (const id of e.ids) {
     if (e.eliminado[id] === null) continue;
@@ -365,7 +370,10 @@ function dibujarPapa(ctx: CanvasRenderingContext2D, e: EstadoPapa, r: Recursos):
     const p = e.pos[e.portador];
     const falta = Math.max(0, e.explota - e.t);
     const temblor = falta < 3 ? (3 - falta) * 4 : 0;
-    papa(ctx, p.x + Math.sin(e.t * 47) * temblor, p.y - 64 + Math.cos(e.t * 53) * temblor, e.t);
+    const px = p.x + Math.sin(e.t * 47) * temblor;
+    const py = p.y - 70 + Math.cos(e.t * 53) * temblor;
+    if (lista(r.papa)) ctx.drawImage(r.papa, px - 40, py - 44, 80, 80);
+    else papa(ctx, px, py + 6, e.t);
   }
   if (e.boom && e.t - e.boom.t < 0.9) {
     const k = (e.t - e.boom.t) / 0.9;
@@ -424,20 +432,24 @@ function papa(ctx: CanvasRenderingContext2D, x: number, y: number, t: number): v
 
 function dibujarSerpentina(ctx: CanvasRenderingContext2D, e: EstadoSerpentina, r: Recursos): void {
   const lado = ANCHO / SERPENTINA.columnas;
-  ctx.fillStyle = '#141318';
-  ctx.fillRect(0, 0, ANCHO, ALTO);
-  ctx.strokeStyle = 'rgba(243, 242, 238, 0.04)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let c = 1; c < SERPENTINA.columnas; c++) {
-    ctx.moveTo(c * lado, 0);
-    ctx.lineTo(c * lado, ALTO);
+  // Pista de baile con papel picado en los bordes; sin la imagen, una grilla oscura.
+  if (lista(r.fondos.serpentina)) ctx.drawImage(r.fondos.serpentina, 0, 0, ANCHO, ALTO);
+  else {
+    ctx.fillStyle = '#141318';
+    ctx.fillRect(0, 0, ANCHO, ALTO);
+    ctx.strokeStyle = 'rgba(243, 242, 238, 0.04)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let c = 1; c < SERPENTINA.columnas; c++) {
+      ctx.moveTo(c * lado, 0);
+      ctx.lineTo(c * lado, ALTO);
+    }
+    for (let f = 1; f < SERPENTINA.filas; f++) {
+      ctx.moveTo(0, f * lado);
+      ctx.lineTo(ANCHO, f * lado);
+    }
+    ctx.stroke();
   }
-  for (let f = 1; f < SERPENTINA.filas; f++) {
-    ctx.moveTo(0, f * lado);
-    ctx.lineTo(ANCHO, f * lado);
-  }
-  ctx.stroke();
   const colores = new Map(e.ids.map((id) => [id, r.color(id)]));
   e.celdas.forEach((duenio, i) => {
     if (!duenio) return;

@@ -121,6 +121,11 @@ def minijuegos() -> None:
     iconos = recortes(sin_fondo_blanco(Image.open(ARTE / "iconos-minijuegos.webp")), columnas=2, filas=2)
     for nombre, pieza in zip(["mate", "ahora", "empanadas", "patio"], iconos):
         cuadrado(pieza, 360).save(carpeta / f"{nombre}.webp", quality=88)
+    iconos = recortes(sin_fondo_blanco(Image.open(ARTE / "iconos-minijuegos-2.webp")), columnas=2, filas=2)
+    for nombre, pieza in zip(["agua", "papa", "serpentina", "diez"], iconos):
+        cuadrado(pieza, 360).save(carpeta / f"{nombre}.webp", quality=88)
+    papa = sin_fondo_blanco(Image.open(ARTE / "papa-caliente.webp"), umbral=240)
+    cuadrado(papa.crop(papa.getbbox()), 192).save(carpeta / "papa-caliente.webp", quality=90)
     empanadas = recortes(sin_fondo_blanco(Image.open(ARTE / "empanadas-sueltas.webp"), umbral=240), columnas=2, filas=2)
     for i, pieza in enumerate(empanadas, 1):
         cuadrado(pieza, 128).save(carpeta / f"empanada-{i}.webp", quality=90)
@@ -131,6 +136,11 @@ def minijuegos() -> None:
     patio = Image.open(ARTE / "fondo-patio.webp").convert("RGB").resize((1280, 720), Image.LANCZOS)
     patio = ImageEnhance.Brightness(ImageEnhance.Color(patio).enhance(0.2)).enhance(0.5)
     patio.save(carpeta / "fondo-patio.webp", quality=80)
+    # El potrero va un poco más oscuro para que se lean los personajes y la papa.
+    potrero = Image.open(ARTE / "fondo-papa.webp").convert("RGB").resize((1280, 720), Image.LANCZOS)
+    ImageEnhance.Brightness(potrero).enhance(0.8).save(carpeta / "fondo-papa.webp", quality=80)
+    pista = Image.open(ARTE / "fondo-serpentina.webp").convert("RGB").resize((1280, 720), Image.LANCZOS)
+    pista.save(carpeta / "fondo-serpentina.webp", quality=80)
 
 
 def main() -> None:

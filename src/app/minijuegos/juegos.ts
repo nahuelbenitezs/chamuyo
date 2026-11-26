@@ -301,10 +301,10 @@ export function paso(e: EstadoMinijuego, dt: number, entradas: Record<string, En
   }
 }
 
-/** Mueve dentro de la arena; `abajo` deja lugar para el nombre debajo del personaje. */
-function mover(p: Punto, v: { x: number; y: number }, distancia: number, margen: number, abajo = margen): void {
+/** Mueve dentro de la arena; `arriba` y `abajo` dejan lugar para lo que se dibuja encima y debajo. */
+function mover(p: Punto, v: { x: number; y: number }, distancia: number, margen: number, arriba = margen, abajo = margen): void {
   p.x = Math.min(ANCHO - margen, Math.max(margen, p.x + v.x * distancia));
-  p.y = Math.min(ALTO - abajo, Math.max(margen, p.y + v.y * distancia));
+  p.y = Math.min(ALTO - abajo, Math.max(arriba, p.y + v.y * distancia));
 }
 
 function pasoAhora(e: EstadoAhora, de: (id: string) => Entrada, azar: Azar): EstadoAhora {
@@ -446,7 +446,8 @@ function pasoPapa(e: EstadoPapa, dt: number, de: (id: string) => Entrada, azar: 
   const vivos = e.ids.filter((id) => e.eliminado[id] === null);
   for (const id of vivos) {
     const rapidez = PAPA.velocidad * (id === e.portador ? PAPA.extraPortador : 1);
-    mover(e.pos[id], limitarVector(de(id)), rapidez * dt, PAPA.radioJugador + 30, PAPA.radioJugador + 50);
+    // Arriba queda lugar para la papa y abajo para el nombre.
+    mover(e.pos[id], limitarVector(de(id)), rapidez * dt, PAPA.radioJugador + 30, 120, PAPA.radioJugador + 50);
   }
   if (e.portador === null) {
     if (e.t >= e.proxima) darPapa(e, azar);
