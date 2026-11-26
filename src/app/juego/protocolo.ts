@@ -1,5 +1,5 @@
 import { Control, CONTROL, IdMinijuego } from '../minijuegos/juegos';
-import { faltanResponder, Modo, opcionesPara, Partida, ranking, TipoRonda } from './motor';
+import { faltanResponder, Modo, opcionesPara, Partida, ranking, TipoRonda, VUELTAS_IMPOSTOR } from './motor';
 
 /** Mensajes que manda un celular a la pantalla anfitriona. */
 export type MsgJugador =
@@ -20,7 +20,17 @@ export type Vista =
   | { v: 'lleno' }
   | { v: 'empezada' }
   | { v: 'lobby'; jefe: boolean; cantidad: number; nombre: string; avatar: string; nombreJefe: string; modo: Modo }
-  | { v: 'escribir'; tipo: TipoRonda; consigna: string; enviado: string | null; restante: number; ronda: number; total: number }
+  | {
+      v: 'escribir';
+      tipo: TipoRonda;
+      consigna: string;
+      enviado: string | null;
+      restante: number;
+      ronda: number;
+      total: number;
+      /** Solo en Impostor. Al impostor nunca le llega la palabra. */
+      impostor?: { soy: boolean; palabra: string | null; vuelta: number; vueltas: number };
+    }
   | { v: 'acerto'; consigna: string }
   | { v: 'votar'; tipo: TipoRonda; consigna: string; opciones: Array<{ id: string; texto: string }>; elegido: string | null; restante: number }
   | { v: 'mirar'; motivo: 'votando' | 'revelando' | 'tabla' | 'sin-opciones' }
@@ -78,6 +88,10 @@ export function vistaPara(p: Partida, id: string, restante: number, etapa: Etapa
         restante,
         ronda: r!.numero,
         total: p.totalRondas,
+        impostor:
+          r!.tipo === 'impostor'
+            ? { soy: r!.impostor === id, palabra: r!.impostor === id ? null : r!.palabra, vuelta: r!.vuelta, vueltas: VUELTAS_IMPOSTOR }
+            : undefined,
       };
     case 'votar': {
       if (r!.acertaron.includes(id)) return { v: 'acerto', consigna: r!.consigna };

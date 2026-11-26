@@ -27,4 +27,12 @@ describe('contenido', () => {
     expect(contenidoEn.datos.length).toBe(contenidoEs.datos.length);
     expect(contenidoEn.consignas.length).toBe(contenidoEs.consignas.length);
   });
+
+  it('el Impostor tiene muchas palabras, sin repetir dentro de cada idioma', () => {
+    for (const c of [contenidoEs, contenidoEn]) {
+      const palabras = (c.secretas ?? []).map((x) => normalizar(x.palabra));
+      expect(palabras.length).toBeGreaterThanOrEqual(200);
+      expect(new Set(palabras).size).toBe(palabras.length);
+    }
+  });
 });

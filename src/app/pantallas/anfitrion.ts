@@ -1,8 +1,7 @@
 import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import QRCode from 'qrcode';
-import { contenidoEn } from '../contenido/en';
-import { contenidoEs } from '../contenido/es';
+import { cargarContenido } from '../contenido/cargar';
 import { cambiarIdioma, idioma, t } from '../i18n';
 import {
   agregarJugador,
@@ -14,6 +13,8 @@ import {
   iniciar,
   MAX_JUGADORES,
   MIN_JUGADORES,
+  minimoPara,
+  VUELTAS_IMPOSTOR,
   Modo,
   nuevaPartida,
   Opcion,
@@ -39,7 +40,7 @@ import { Anfitrion } from '../juego/red';
 import { alternarSonido, sfx, sonidoActivo } from '../juego/sonido';
 
 const SEG = 1000;
-const TIEMPO = { chamuyo: 75 * SEG, ocurrencias: 60 * SEG, votar: 35 * SEG, paso: 3400, tabla: 7000 };
+const TIEMPO = { chamuyo: 75 * SEG, ocurrencias: 60 * SEG, impostor: 45 * SEG, votar: 35 * SEG, paso: 3400, tabla: 7000 };
 
 @Component({
   selector: 'app-anfitrion',
@@ -56,6 +57,9 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   protected readonly partes = partesConsigna;
   protected readonly max = MAX_JUGADORES;
   protected readonly min = MIN_JUGADORES;
+  protected readonly vueltasImpostor = VUELTAS_IMPOSTOR;
+  protected minimo = computed(() => minimoPara(this.modo()));
+  private arrancando = false;
 
   protected partida = signal<Partida>(nuevaPartida());
   protected codigo = signal<string | null>(null);
@@ -69,7 +73,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   protected copiado = signal(false);
   protected compartiendo = signal(false);
   protected etapaMinijuego = signal<EtapaMinijuego>('intro');
-  protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'minijuegos'];
+  protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'impostor', 'minijuegos'];
   private lienzo = viewChild<ElementRef<HTMLCanvasElement>>('lienzo');
   private marco = viewChild<ElementRef<HTMLElement>>('marco');
   /** Escena 3D de Al agua; three.js se baja recién cuando toca ese juego. */
@@ -171,6 +175,8 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
   protected urlSala = computed(() => `${location.origin}${location.pathname}?sala=${this.codigo() ?? ''}`);
 
   ngOnInit(): void {
+    // El contenido se va bajando mientras la sala espera jugadores.
+    void cargarContenido(idioma());
     this.red.abrir();
     this.reloj = setInterval(() => this.tic(), 250);
     void this.mantenerPantalla();
@@ -178,12 +184,18 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
 
   protected nombreModo(m: Modo): string {
     const x = t();
-    return { mixto: x.modoMixto, chamuyo: x.modoChamuyo, ocurrencias: x.modoOcurrencias, minijuegos: x.modoMinijuegos }[m];
+    return { mixto: x.modoMixto, chamuyo: x.modoChamuyo, ocurrencias: x.modoOcurrencias, minijuegos: x.modoMinijuegos, impostor: x.modoImpostor }[m];
   }
 
   protected descModo(m: Modo): string {
     const x = t();
-    return { mixto: x.modoMixtoDesc, chamuyo: x.modoChamuyoDesc, ocurrencias: x.modoOcurrenciasDesc, minijuegos: x.modoMinijuegosDesc }[m];
+    return {
+      mixto: x.modoMixtoDesc,
+      chamuyo: x.modoChamuyoDesc,
+      ocurrencias: x.modoOcurrenciasDesc,
+      minijuegos: x.modoMinijuegosDesc,
+      impostor: x.modoImpostorDesc,
+    }[m];
   }
 
   ngOnDestroy(): void {
@@ -241,11 +253,19 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     }
   }
 
-  protected empezar(modo: Modo = this.modo()): void {
+  protected async empezar(modo: Modo = this.modo()): Promise<void> {
+    if (this.arrancando || this.partida().fase !== 'lobby' || this.partida().jugadores.length < minimoPara(modo)) return;
+    this.arrancando = true;
+    let contenido;
+    try {
+      contenido = await cargarContenido(idioma());
+    } finally {
+      this.arrancando = false;
+    }
+    // Mientras bajaba el contenido pudo irse alguien o cambiar algo: se vuelve a mirar.
     const p = this.partida();
-    if (p.fase !== 'lobby' || p.jugadores.length < MIN_JUGADORES) return;
+    if (p.fase !== 'lobby' || p.jugadores.length < minimoPara(modo)) return;
     this.modo.set(modo);
-    const contenido = idioma() === 'es' ? contenidoEs : contenidoEn;
     const usados = leerUsados();
     const nueva = iniciar(p, modo, this.rondas(), contenido, Math.random, usados);
     guardarUsados([...usados, ...nueva.plan.filter((x) => x.tipo !== 'minijuego').map(claveDe)]);
@@ -354,7 +374,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     if (!r) return this.terminar();
     if (r.tipo === 'minijuego') return this.entrarMinijuego();
     this.paso.set(-1);
-    this.fin.set(Date.now() + (r.tipo === 'chamuyo' ? TIEMPO.chamuyo : TIEMPO.ocurrencias));
+    this.fin.set(Date.now() + (r.tipo === 'chamuyo' ? TIEMPO.chamuyo : r.tipo === 'impostor' ? TIEMPO.impostor : TIEMPO.ocurrencias));
     this.programar(() => this.cerrarEscritura(), this.restante());
     sfx.fase();
     this.difundir();
@@ -362,6 +382,8 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
 
   private cerrarEscritura(): void {
     this.partida.update((p) => cerrarEscritura(p, Math.random));
+    // Impostor: después de la primera vuelta de pistas viene la segunda.
+    if (this.partida().fase === 'escribir') return this.entrarEscribir();
     if (this.partida().fase === 'votar') {
       this.fin.set(Date.now() + TIEMPO.votar);
       this.programar(() => this.cerrarVotacion(), TIEMPO.votar);
@@ -382,6 +404,7 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
     this.fin.set(0);
     this.paso.set(-1);
     this.difundir();
+    if (this.ronda()?.tipo === 'impostor') return this.revelarImpostor();
     const total = this.ordenRevelar().length;
     const siguientePaso = (i: number) => {
       if (i >= total) {
@@ -396,6 +419,24 @@ export class PantallaAnfitrion implements OnInit, OnDestroy {
       this.programar(() => siguientePaso(i + 1), TIEMPO.paso);
     };
     this.programar(() => siguientePaso(0), 900);
+  }
+
+  /** Impostor: primero se ve quién votó a quién; después, quién era y la palabra. */
+  private revelarImpostor(): void {
+    this.programar(() => {
+      this.paso.set(0);
+      if (this.ronda()?.descubierto) sfx.verdad();
+      else sfx.revela();
+      setTimeout(() => sfx.puntos(), 1200);
+      this.programar(() => this.mostrarTabla(), 6000);
+    }, 3200);
+  }
+
+  /** A quién votó un jugador en la ronda de Impostor. */
+  protected votoDe(id: string): string | null {
+    const r = this.ronda();
+    const op = r?.votos[id];
+    return op ? (r!.opciones.find((o) => o.id === op)?.autores[0] ?? null) : null;
   }
 
   private mostrarTabla(): void {

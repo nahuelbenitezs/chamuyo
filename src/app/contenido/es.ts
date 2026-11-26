@@ -1,4 +1,5 @@
 import { Contenido } from '../juego/motor';
+import { secretasEs } from './impostor';
 
 export const contenidoEs: Contenido = {
   datos: [
@@ -252,4 +253,5 @@ export const contenidoEs: Contenido = {
     "El peor consejo para una entrevista de trabajo",
     "Lo que dice la etiqueta de un buzo de abuela",
   ],
+  secretas: secretasEs,
 };

@@ -2,8 +2,8 @@
 // los celulares solo reciben la vista que les corresponde.
 import { IdMinijuego, MINIJUEGOS } from '../minijuegos/juegos';
 
-export type Modo = 'chamuyo' | 'ocurrencias' | 'mixto' | 'minijuegos';
-export type TipoRonda = 'chamuyo' | 'ocurrencias' | 'minijuego';
+export type Modo = 'chamuyo' | 'ocurrencias' | 'mixto' | 'minijuegos' | 'impostor';
+export type TipoRonda = 'chamuyo' | 'ocurrencias' | 'minijuego' | 'impostor';
 export type Fase = 'lobby' | 'escribir' | 'votar' | 'minijuego' | 'revelar' | 'tabla' | 'final';
 
 export interface Jugador {
@@ -19,6 +19,12 @@ export interface Dato {
   texto: string;
   verdad: string;
   senuelos: string[];
+}
+
+/** Una palabra secreta para el Impostor, con la categoría que sí conoce el impostor. */
+export interface Secreta {
+  categoria: string;
+  palabra: string;
 }
 
 export interface Opcion {
@@ -47,11 +53,19 @@ export interface Ronda {
   minijuego: IdMinijuego | null;
   orden: string[];
   lugar: Record<string, number>;
+  /** Solo en Impostor: quién es, la palabra secreta, en qué vuelta de pistas va y las pistas de cada uno. */
+  impostor: string | null;
+  palabra: string | null;
+  vuelta: number;
+  pistas: Record<string, string[]>;
+  /** Si al impostor lo votó la mayoría (null mientras no se votó). */
+  descubierto: boolean | null;
 }
 
 export interface Contenido {
   datos: Dato[];
   consignas: string[];
+  secretas?: Secreta[];
 }
 
 export interface Partida {
@@ -60,7 +74,7 @@ export interface Partida {
   jugadores: Jugador[];
   totalRondas: number;
   ronda: Ronda | null;
-  plan: Array<{ tipo: TipoRonda; dato?: Dato; consigna?: string; minijuego?: IdMinijuego }>;
+  plan: Array<{ tipo: TipoRonda; dato?: Dato; consigna?: string; minijuego?: IdMinijuego; secreta?: Secreta }>;
   /** La respuesta más votada de la partida: la mentira que más engañó o la ocurrencia que más gustó. */
   destacado: Destacado | null;
 }
@@ -76,7 +90,10 @@ export interface Destacado {
 export const MAX_JUGADORES = 8;
 export const MIN_JUGADORES = 2;
 export const MAX_LARGO = 60;
-export const PUNTOS = { verdad: 1000, engano: 500, voto: 500, unanime: 1000 } as const;
+export const PUNTOS = { verdad: 1000, engano: 500, voto: 500, unanime: 1000, descubrir: 1000, despistar: 500, escapar: 1000 } as const;
+/** El Impostor necesita al menos tres: con dos, el que no es impostor ya sabe quién es. */
+export const MIN_IMPOSTOR = 3;
+export const VUELTAS_IMPOSTOR = 2;
 /** Puntos de un minijuego según el puesto (1°, 2°, 3°…). */
 export const PUNTOS_PUESTO = [1000, 600, 400, 250, 150, 100, 50, 0] as const;
 
@@ -132,8 +149,14 @@ export function quitarJugador(p: Partida, id: string): Partida {
 }
 
 /** Clave estable de un contenido, para recordar qué ya salió en partidas anteriores. */
-export function claveDe(paso: { dato?: Dato; consigna?: string }): string {
+export function claveDe(paso: { dato?: Dato; consigna?: string; secreta?: Secreta }): string {
+  if (paso.secreta) return 'p:' + normalizar(paso.secreta.palabra);
   return paso.dato ? 'd:' + normalizar(paso.dato.texto) : 'c:' + normalizar(paso.consigna ?? '');
+}
+
+/** Cuántos jugadores hacen falta para empezar en cada modo. */
+export function minimoPara(modo: Modo): number {
+  return modo === 'impostor' ? MIN_IMPOSTOR : MIN_JUGADORES;
 }
 
 /** Mezcla la lista dejando al final (que es lo primero que se saca) lo que todavía no salió. */
@@ -149,17 +172,21 @@ export function iniciar(
   azar: Azar,
   usados: ReadonlySet<string> = new Set(),
 ): Partida {
-  if (p.jugadores.length < MIN_JUGADORES) return p;
+  if (p.jugadores.length < minimoPara(modo)) return p;
   const datos = priorizarNuevos(contenido.datos, (dato) => claveDe({ dato }), usados, azar);
   const consignas = priorizarNuevos(contenido.consignas, (consigna) => claveDe({ consigna }), usados, azar);
   const plan: Partida['plan'] = [];
   const minijuegos = mezclar(MINIJUEGOS, azar);
-  for (let i = 0; i < rondas && modo === 'minijuegos'; i++) {
-    plan.push({ tipo: 'minijuego', minijuego: minijuegos[i % minijuegos.length] });
-  }
-  for (let i = 0; i < rondas && modo !== 'minijuegos'; i++) {
-    const tipo = modo === 'mixto' ? (i % 2 === 0 ? 'chamuyo' : 'ocurrencias') : modo;
-    if (tipo === 'chamuyo' && datos.length) plan.push({ tipo, dato: datos.pop() });
+  const secretas = priorizarNuevos(contenido.secretas ?? [], (secreta) => claveDe({ secreta }), usados, azar);
+  // Mixto es un poco de todo; el Impostor entra solo si son tres o más.
+  const conImpostor = p.jugadores.length >= MIN_IMPOSTOR && secretas.length > 0;
+  const ciclo: TipoRonda[] = conImpostor ? ['chamuyo', 'ocurrencias', 'impostor', 'minijuego'] : ['chamuyo', 'ocurrencias', 'minijuego'];
+  let siguienteMinijuego = 0;
+  for (let i = 0; i < rondas; i++) {
+    const tipo: TipoRonda = modo === 'mixto' ? ciclo[i % ciclo.length] : modo === 'minijuegos' ? 'minijuego' : modo;
+    if (tipo === 'minijuego') plan.push({ tipo, minijuego: minijuegos[siguienteMinijuego++ % minijuegos.length] });
+    else if (tipo === 'impostor' && secretas.length) plan.push({ tipo, secreta: secretas.pop() });
+    else if (tipo === 'chamuyo' && datos.length) plan.push({ tipo, dato: datos.pop() });
     else if (consignas.length) plan.push({ tipo: 'ocurrencias', consigna: consignas.pop() });
   }
   const base: Partida = {
@@ -181,9 +208,13 @@ function empezarRonda(p: Partida, indice: number, azar: Azar): Partida {
   const consigna =
     paso.tipo === 'minijuego'
       ? ''
-      : paso.tipo === 'chamuyo'
-        ? paso.dato!.texto
-        : paso.consigna!.replace(/\{jugador\}/g, () => nombres[Math.floor(azar() * nombres.length)]);
+      : paso.tipo === 'impostor'
+        ? paso.secreta!.categoria
+        : paso.tipo === 'chamuyo'
+          ? paso.dato!.texto
+          : paso.consigna!.replace(/\{jugador\}/g, () => nombres[Math.floor(azar() * nombres.length)]);
+  const candidatos = p.jugadores.filter((j) => j.conectado);
+  const impostor = paso.tipo === 'impostor' ? (candidatos[Math.floor(azar() * candidatos.length)]?.id ?? null) : null;
   const ronda: Ronda = {
     numero: indice + 1,
     tipo: paso.tipo,
@@ -199,6 +230,11 @@ function empezarRonda(p: Partida, indice: number, azar: Azar): Partida {
     minijuego: paso.minijuego ?? null,
     orden: [],
     lugar: {},
+    impostor,
+    palabra: paso.secreta?.palabra ?? null,
+    vuelta: 1,
+    pistas: {},
+    descubierto: null,
   };
   return { ...p, fase: paso.tipo === 'minijuego' ? 'minijuego' : 'escribir', ronda };
 }
@@ -244,6 +280,7 @@ export function faltanResponder(p: Partida): string[] {
 export function cerrarEscritura(p: Partida, azar: Azar): Partida {
   const r = p.ronda;
   if (p.fase !== 'escribir' || !r) return p;
+  if (r.tipo === 'impostor') return cerrarPistas(p, r);
   const acertaron: string[] = [];
   const grupos = new Map<string, Opcion>();
   const verdadNorm = r.verdad ? normalizar(r.verdad) : null;
@@ -273,6 +310,31 @@ export function cerrarEscritura(p: Partida, azar: Azar): Partida {
 
   const numeradas = mezclar(opciones, azar).map((o, i) => ({ ...o, id: `o${i + 1}` }));
   const siguiente: Partida = { ...p, fase: 'votar', ronda: { ...r, acertaron, opciones: numeradas } };
+  return puedenVotar(siguiente).length ? siguiente : puntuar(siguiente);
+}
+
+/** Si una pista dice la palabra secreta, se tapa: si no, el impostor la vería en la tele. */
+export function censurar(pista: string, palabra: string | null): string {
+  return palabra && normalizar(pista).includes(normalizar(palabra)) ? '🙊' : pista;
+}
+
+/** Impostor: guarda las pistas de la vuelta; después de la última se vota a un jugador. */
+function cerrarPistas(p: Partida, r: Ronda): Partida {
+  const pistas: Record<string, string[]> = {};
+  for (const j of p.jugadores) {
+    const texto = r.respuestas[j.id];
+    pistas[j.id] = [...(r.pistas[j.id] ?? []), texto ? censurar(texto, r.palabra) : '—'];
+  }
+  if (r.vuelta < VUELTAS_IMPOSTOR) return { ...p, ronda: { ...r, pistas, respuestas: {}, vuelta: r.vuelta + 1 } };
+  const opciones: Opcion[] = p.jugadores.map((j, i) => ({
+    id: `o${i + 1}`,
+    texto: j.nombre,
+    autores: [j.id],
+    verdad: j.id === r.impostor,
+    senuelo: false,
+    votantes: [],
+  }));
+  const siguiente: Partida = { ...p, fase: 'votar', ronda: { ...r, pistas, respuestas: {}, opciones } };
   return puedenVotar(siguiente).length ? siguiente : puntuar(siguiente);
 }
 
@@ -315,7 +377,20 @@ export function puntuar(p: Partida): Partida {
       .map(([id]) => id),
   }));
 
-  if (r.tipo === 'chamuyo') {
+  let descubierto: boolean | null = null;
+  if (r.tipo === 'impostor') {
+    // Lo descubren si es el único más votado. Cada uno que lo votó suma; cada voto a otro lo suma él.
+    const maximo = Math.max(0, ...opciones.map((o) => o.votantes.length));
+    const masVotadas = opciones.filter((o) => maximo > 0 && o.votantes.length === maximo);
+    descubierto = masVotadas.length === 1 && masVotadas[0].verdad;
+    const delImpostor = opciones.find((o) => o.verdad);
+    for (const [votante, op] of Object.entries(r.votos)) {
+      if (votante === r.impostor) continue;
+      if (op === delImpostor?.id) sumar(votante, PUNTOS.descubrir);
+      else if (r.impostor) sumar(r.impostor, PUNTOS.despistar);
+    }
+    if (r.impostor && !descubierto) sumar(r.impostor, PUNTOS.escapar);
+  } else if (r.tipo === 'chamuyo') {
     for (const id of r.acertaron) sumar(id, PUNTOS.verdad);
     for (const o of opciones) {
       if (o.verdad) o.votantes.forEach((id) => sumar(id, PUNTOS.verdad));
@@ -330,7 +405,7 @@ export function puntuar(p: Partida): Partida {
   }
 
   let destacado = p.destacado;
-  for (const o of opciones) {
+  for (const o of r.tipo === 'impostor' ? [] : opciones) {
     if (o.verdad || o.senuelo || !o.autores.length || !o.votantes.length) continue;
     // En empate gana la más reciente, salvo que le quite el lugar a una mentira (es lo más lindo de compartir).
     const empataYEsMejor = destacado && o.votantes.length === destacado.votos && (r.tipo === 'chamuyo' || destacado.tipo !== 'chamuyo');
@@ -343,14 +418,14 @@ export function puntuar(p: Partida): Partida {
     ...p,
     fase: 'revelar',
     destacado,
-    ronda: { ...r, opciones, puntosRonda: ganados },
+    ronda: { ...r, opciones, puntosRonda: ganados, descubierto },
     jugadores: p.jugadores.map((j) => ({ ...j, puntos: j.puntos + (ganados[j.id] ?? 0) })),
   };
 }
 
 /** Puntos que ganó cada autor gracias a una opción puntual (no el total de su ronda). */
 export function puntosPorOpcion(r: Ronda, o: Opcion): number {
-  if (o.verdad || !o.autores.length) return 0;
+  if (o.verdad || !o.autores.length || r.tipo === 'impostor') return 0;
   const mult = r.dobles ? 2 : 1;
   if (r.tipo === 'chamuyo') return PUNTOS.engano * o.votantes.length * mult;
   const votantes = Object.keys(r.votos).length;

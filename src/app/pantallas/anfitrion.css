@@ -216,6 +216,11 @@
   gap: 0.6rem;
 }
 
+/* Mixto, el recomendado, va arriba ocupando toda la fila. */
+.grupo .opcion-modo:first-child {
+  grid-column: 1 / -1;
+}
+
 .opcion-modo {
   display: grid;
   gap: 0.25rem;
@@ -470,6 +475,169 @@
 
 .tarjeta.verdad .sumados {
   color: #062614;
+}
+
+/* ---- impostor ---- */
+
+.categoria-etiqueta {
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.4rem);
+  font-weight: 800;
+  color: var(--tenue);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.pistas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pistas li {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.8rem;
+  align-items: center;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radio);
+  background: var(--superficie);
+  animation: entrar 0.45s var(--ease) both;
+}
+
+.pistas .avatar {
+  grid-row: span 2;
+  width: 3.4rem;
+  height: 3.4rem;
+}
+
+.pistas .nombre {
+  font-weight: 800;
+  color: var(--tenue);
+}
+
+.pistas-de {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pista {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  font-size: clamp(1.05rem, 1.7vw, 1.5rem);
+  font-weight: 800;
+}
+
+.pistas.grandes {
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+}
+
+.pistas.grandes .pista {
+  font-size: clamp(1.2rem, 2vw, 1.8rem);
+}
+
+.pistas li .marca-listo {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+}
+
+.revelacion {
+  justify-items: center;
+  text-align: center;
+}
+
+.votos-impostor {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem 1.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.votos-impostor li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: var(--superficie);
+  animation: entrar 0.4s var(--ease) both;
+}
+
+.sin-voto {
+  color: var(--tenue);
+  font-weight: 800;
+}
+
+.suspenso {
+  font-size: clamp(2.6rem, 6vw, 5rem);
+  color: var(--acento);
+  animation: latido 1.1s ease-in-out infinite;
+}
+
+@keyframes latido {
+  50% {
+    scale: 1.05;
+  }
+}
+
+.impostor-revelado {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  animation: rebote 0.7s var(--ease) both;
+}
+
+.impostor-revelado h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 5vw, 4.2rem);
+}
+
+.resultado {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 3.2rem);
+  color: var(--mentira);
+}
+
+.resultado.descubierto {
+  color: var(--verdad);
+}
+
+.palabra-era {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.2vw, 1.9rem);
+  color: var(--tenue);
+}
+
+.palabra-era b {
+  color: var(--acento);
+  text-transform: uppercase;
+}
+
+.ganadores {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8rem;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ganadores li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 /* ---- minijuegos ---- */

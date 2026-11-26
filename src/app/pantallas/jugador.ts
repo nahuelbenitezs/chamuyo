@@ -57,7 +57,7 @@ export class PantallaJugador implements OnInit, OnDestroy {
   protected readonly partes = partesConsigna;
   protected readonly maxLargo = MAX_LARGO;
   protected readonly colorDe = colorDe;
-  protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'minijuegos'];
+  protected readonly modos: Modo[] = ['mixto', 'chamuyo', 'ocurrencias', 'impostor', 'minijuegos'];
 
   protected codigo = signal('');
   protected nombre = signal(leer('chamuyo-nombre'));
@@ -99,10 +99,10 @@ export class PantallaJugador implements OnInit, OnDestroy {
     // Vibra cuando cambia lo que hay que hacer, para que nadie se quede mirando la tele sin responder.
     effect(() => {
       const v = this.vista();
-      const clave = v?.v === 'control' ? `control-${v.etapa}` : (v?.v ?? '');
+      const clave = v?.v === 'control' ? `control-${v.etapa}` : v?.v === 'escribir' ? `escribir-${v.impostor?.vuelta ?? 0}` : (v?.v ?? '');
       if (!v || clave === this.ultimaVista) return;
       this.ultimaVista = clave;
-      if (v.v === 'escribir' || v.v === 'votar' || clave === 'control-intro') navigator.vibrate?.(60);
+      if (v.v === 'escribir' || v.v === 'votar' || clave === 'control-intro') navigator.vibrate?.(v.v === 'escribir' && v.impostor?.soy ? [60, 80, 60] : 60);
       if (clave === 'control-jugando') navigator.vibrate?.([40, 60, 40]);
       if (clave !== 'control-jugando') untracked(() => this.soltarPalanca(false));
       untracked(() => this.tocado.set(false));
@@ -184,7 +184,7 @@ export class PantallaJugador implements OnInit, OnDestroy {
 
   protected nombreModo(m: Modo): string {
     const x = t();
-    return { mixto: x.modoMixto, chamuyo: x.modoChamuyo, ocurrencias: x.modoOcurrencias, minijuegos: x.modoMinijuegos }[m];
+    return { mixto: x.modoMixto, chamuyo: x.modoChamuyo, ocurrencias: x.modoOcurrencias, minijuegos: x.modoMinijuegos, impostor: x.modoImpostor }[m];
   }
 
   // ---- controles de los minijuegos ----
@@ -260,7 +260,9 @@ export class PantallaJugador implements OnInit, OnDestroy {
   }
 
   private recibir(v: Vista): void {
-    if (v.v === 'escribir' && this.vista()?.v !== 'escribir') this.borrador.set('');
+    const antes = this.vista();
+    // Una pista nueva (o la segunda vuelta del Impostor) empieza con el cuadro vacío.
+    if (v.v === 'escribir' && (antes?.v !== 'escribir' || antes.impostor?.vuelta !== v.impostor?.vuelta)) this.borrador.set('');
     if ('restante' in v) this.fin.set(Date.now() + v.restante);
     this.vista.set(v);
   }

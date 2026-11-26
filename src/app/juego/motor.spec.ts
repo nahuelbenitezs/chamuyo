@@ -1,4 +1,5 @@
 import {
+  censurar,
   PUNTOS_PUESTO,
   resultadoMinijuego,
   agregarJugador,
@@ -152,5 +153,63 @@ describe('motor', () => {
     const puntos = Object.fromEntries(p.jugadores.map((j) => [j.id, j.puntos]));
     expect(puntos).toEqual({ j1: PUNTOS_PUESTO[0], j2: PUNTOS_PUESTO[0], j3: PUNTOS_PUESTO[2] });
     expect(p.ronda!.lugar).toEqual({ j1: 1, j2: 1, j3: 3 });
+  });
+
+  it('el Impostor: dos vueltas de pistas, se vota y suman los que lo descubren', () => {
+    const conPalabras: Contenido = { ...contenido, secretas: [{ categoria: 'Comidas', palabra: 'Empanada' }] };
+    let p = iniciar(conJugadores(4), 'impostor', 1, conPalabras, azarFijo());
+    const r = p.ronda!;
+    expect(r.tipo).toBe('impostor');
+    expect(r.consigna).toBe('Comidas');
+    const imp = r.impostor!;
+    const otros = ['j1', 'j2', 'j3', 'j4'].filter((id) => id !== imp);
+    for (const id of ['j1', 'j2', 'j3', 'j4']) p = responder(p, id, id === otros[0] ? 'empanadas al horno' : 'rica');
+    p = cerrarEscritura(p, azarFijo());
+    // Primera vuelta guardada; la pista que decía la palabra quedó tapada.
+    expect(p.fase).toBe('escribir');
+    expect(p.ronda!.vuelta).toBe(2);
+    expect(p.ronda!.pistas[otros[0]]).toEqual(['🙊']);
+    p = cerrarEscritura(p, azarFijo());
+    expect(p.fase).toBe('votar');
+    const opcionDe = (id: string) => p.ronda!.opciones.find((o) => o.autores.includes(id))!.id;
+    // Nadie se puede votar a sí mismo.
+    expect(opcionesPara(p, otros[0]).some((o) => o.autores.includes(otros[0]))).toBe(false);
+    p = votar(p, otros[0], opcionDe(imp));
+    p = votar(p, otros[1], opcionDe(imp));
+    p = votar(p, otros[2], opcionDe(otros[0]));
+    p = votar(p, imp, opcionDe(otros[1]));
+    p = puntuar(p);
+    const puntos = Object.fromEntries(p.jugadores.map((j) => [j.id, j.puntos]));
+    expect(p.ronda!.descubierto).toBe(true);
+    expect(puntos[otros[0]]).toBe(PUNTOS.descubrir);
+    expect(puntos[otros[1]]).toBe(PUNTOS.descubrir);
+    expect(puntos[otros[2]]).toBe(0);
+    expect(puntos[imp]).toBe(PUNTOS.despistar);
+  });
+
+  it('si el impostor se escapa, suma por escaparse y por cada voto a otro', () => {
+    const conPalabras: Contenido = { ...contenido, secretas: [{ categoria: 'Lugares', palabra: 'Playa' }] };
+    let p = iniciar(conJugadores(3), 'impostor', 1, conPalabras, azarFijo());
+    const imp = p.ronda!.impostor!;
+    const otros = ['j1', 'j2', 'j3'].filter((id) => id !== imp);
+    p = cerrarEscritura(cerrarEscritura(p, azarFijo()), azarFijo());
+    const opcionDe = (id: string) => p.ronda!.opciones.find((o) => o.autores.includes(id))!.id;
+    p = votar(p, otros[0], opcionDe(otros[1]));
+    p = votar(p, otros[1], opcionDe(otros[0]));
+    p = puntuar(p);
+    expect(p.ronda!.descubierto).toBe(false);
+    expect(p.jugadores.find((j) => j.id === imp)!.puntos).toBe(PUNTOS.escapar + 2 * PUNTOS.despistar);
+  });
+
+  it('el Impostor no arranca con dos y Mixto lo suma solo desde tres', () => {
+    const conPalabras: Contenido = { ...contenido, secretas: [{ categoria: 'Animales', palabra: 'Carpincho' }] };
+    expect(iniciar(conJugadores(2), 'impostor', 2, conPalabras, azarFijo()).fase).toBe('lobby');
+    expect(iniciar(conJugadores(2), 'mixto', 4, conPalabras, azarFijo()).plan.map((x) => x.tipo)).toEqual(['chamuyo', 'ocurrencias', 'minijuego', 'ocurrencias']);
+    expect(iniciar(conJugadores(3), 'mixto', 4, conPalabras, azarFijo()).plan.map((x) => x.tipo)).toEqual(['chamuyo', 'ocurrencias', 'impostor', 'minijuego']);
+  });
+
+  it('tapa las pistas que dicen la palabra secreta', () => {
+    expect(censurar('Empanadas!', 'empanada')).toBe('🙊');
+    expect(censurar('horno', 'empanada')).toBe('horno');
   });
 });

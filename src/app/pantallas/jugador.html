@@ -67,7 +67,7 @@
                   </button>
                 }
               </div>
-              <button class="boton ancho" type="button" [disabled]="v.cantidad < 2" (click)="empezar()">
+              <button class="boton ancho" type="button" [disabled]="v.cantidad < (modoElegido() === 'impostor' ? 3 : 2)" (click)="empezar()">
                 {{ t().empezar }} · {{ v.cantidad }} {{ t().jugadores }}
               </button>
             } @else {
@@ -78,18 +78,32 @@
         @case ('escribir') {
           <section class="turno">
             <div class="cabeza">
-              <span class="chip">{{ t().ronda }} {{ v.ronda }}/{{ v.total }}</span>
+              <span class="chip">{{ v.impostor ? t().vueltaDe(v.impostor.vuelta, v.impostor.vueltas) : t().ronda + ' ' + v.ronda + '/' + v.total }}</span>
               <span class="reloj" [class.urgente]="segundos() <= 10">{{ segundos() }}{{ t().segundos }}</span>
             </div>
-            <p class="consigna">
-              @for (parte of partes(v.consigna); track $index) {
-                @if (parte.hueco) {
-                  <span class="hueco-grupo"><span class="hueco">&nbsp;</span>{{ parte.texto }}</span>
+            @if (v.impostor; as imp) {
+              <div class="secreto" [class.soy]="imp.soy">
+                @if (imp.soy) {
+                  <p class="secreto-titulo titular">🤫 {{ t().sosImpostor }}</p>
+                  <p class="secreto-categoria">{{ t().categoria }}: <b>{{ v.consigna }}</b></p>
+                  <small>{{ t().sosImpostorAyuda }}</small>
                 } @else {
-                  {{ parte.texto }}
+                  <small>{{ t().palabraSecreta }}</small>
+                  <p class="secreto-palabra titular">{{ imp.palabra }}</p>
+                  <small>{{ t().categoria }}: {{ v.consigna }}</small>
                 }
-              }
-            </p>
+              </div>
+            } @else {
+              <p class="consigna">
+                @for (parte of partes(v.consigna); track $index) {
+                  @if (parte.hueco) {
+                    <span class="hueco-grupo"><span class="hueco">&nbsp;</span>{{ parte.texto }}</span>
+                  } @else {
+                    {{ parte.texto }}
+                  }
+                }
+              </p>
+            }
             @if (v.enviado) {
               <div class="enviado">
                 <i class="ph-bold ph-check-circle"></i>
@@ -99,7 +113,7 @@
             } @else {
               <form class="responder" (submit)="$event.preventDefault(); mandar()">
                 <label class="campo">
-                  <span>{{ v.tipo === 'chamuyo' ? t().tuMentira : t().tuRespuesta }}</span>
+                  <span>{{ v.tipo === 'chamuyo' ? t().tuMentira : v.tipo === 'impostor' ? t().tuPista : t().tuRespuesta }}</span>
                   <textarea class="entrada" rows="3" [value]="borrador()" (input)="borrador.set($any($event.target).value)"
                     [attr.maxlength]="maxLargo" enterkeyhint="send" (keydown.enter)="$event.preventDefault(); mandar()"></textarea>
                 </label>
@@ -117,7 +131,7 @@
         @case ('votar') {
           <section class="turno">
             <div class="cabeza">
-              <span class="chip">{{ v.tipo === 'chamuyo' ? t().elegiVerdad : t().elegiMejor }}</span>
+              <span class="chip">{{ v.tipo === 'chamuyo' ? t().elegiVerdad : v.tipo === 'impostor' ? t().quienImpostor : t().elegiMejor }}</span>
               <span class="reloj" [class.urgente]="segundos() <= 10">{{ segundos() }}{{ t().segundos }}</span>
             </div>
             @if (v.elegido) {

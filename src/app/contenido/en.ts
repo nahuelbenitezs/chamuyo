@@ -1,4 +1,5 @@
 import { Contenido } from '../juego/motor';
+import { secretasEn } from './impostor';
 
 export const contenidoEn: Contenido = {
   datos: [
@@ -252,4 +253,5 @@ export const contenidoEn: Contenido = {
     "The worst advice for a job interview",
     "What the tag on grandma's sweater says",
   ],
+  secretas: secretasEn,
 };

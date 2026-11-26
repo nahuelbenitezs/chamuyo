@@ -77,12 +77,14 @@
                     }
                   </select>
                 </label>
-                <button class="boton grande" type="button" [disabled]="jugadores().length < min" (click)="empezar()">
+                <button class="boton grande" type="button" [disabled]="jugadores().length < minimo()" (click)="empezar()">
                   <i class="ph-bold ph-play"></i> {{ t().empezar }}
                 </button>
               </div>
               @if (jugadores().length < min) {
                 <p class="nota">{{ t().faltaUno }}</p>
+              } @else if (jugadores().length < minimo()) {
+                <p class="nota">{{ t().faltanTres }}</p>
               }
             </div>
           </div>
@@ -91,10 +93,51 @@
 
       @case ('escribir') {
         @if (ronda(); as r) {
+          @if (r.tipo === 'impostor') {
+          <section class="ronda impostor">
+            <div class="ronda-cabeza">
+              <span class="chip">{{ r.dobles ? t().final : t().ronda + ' ' + r.numero + ' ' + t().de + ' ' + partida().totalRondas }}</span>
+              <span class="chip tipo">{{ t().modoImpostor }}</span>
+              <span class="chip">{{ t().vueltaDe(r.vuelta, vueltasImpostor) }}</span>
+              @if (r.dobles) {
+                <span class="chip dobles">{{ t().puntosDobles }}</span>
+              }
+              <span class="reloj titular" [class.urgente]="segundos() <= 10">{{ segundos() }}</span>
+            </div>
+            <p class="categoria-etiqueta">{{ t().categoria }}</p>
+            <h1 class="consigna titular">{{ r.consigna }}</h1>
+            <p class="instruccion">{{ t().escribanPista }}</p>
+            @if (r.vuelta > 1) {
+              <ul class="pistas">
+                @for (j of jugadores(); track j.id) {
+                  <li [class.listo]="listos().has(j.id)">
+                    <img class="avatar" [src]="imagen(j.avatar)" [alt]="j.nombre" />
+                    <span class="nombre">{{ j.nombre }}</span>
+                    <span class="pistas-de">
+                      @for (pista of r.pistas[j.id] ?? []; track $index) {
+                        <span class="pista">{{ pista }}</span>
+                      }
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
+            <ul class="estado-jugadores">
+              @for (j of jugadores(); track j.id) {
+                <li [class.listo]="listos().has(j.id)">
+                  <img class="avatar" [src]="imagen(j.avatar)" [alt]="j.nombre" />
+                  @if (listos().has(j.id)) {
+                    <i class="ph-bold ph-check-circle marca-listo"></i>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+          } @else {
           <section class="ronda">
             <div class="ronda-cabeza">
               <span class="chip">{{ r.dobles ? t().final : t().ronda + ' ' + r.numero + ' ' + t().de + ' ' + partida().totalRondas }}</span>
-              <span class="chip tipo">{{ r.tipo === 'chamuyo' ? t().modoChamuyo : t().modoOcurrencias }}</span>
+              <span class="chip tipo">{{ nombreModo(r.tipo === 'minijuego' ? 'minijuegos' : r.tipo) }}</span>
               @if (r.dobles) {
                 <span class="chip dobles">{{ t().puntosDobles }}</span>
               }
@@ -121,11 +164,38 @@
               }
             </ul>
           </section>
+          }
         }
       }
 
       @case ('votar') {
         @if (ronda(); as r) {
+          @if (r.tipo === 'impostor') {
+          <section class="ronda impostor">
+            <div class="ronda-cabeza">
+              <span class="chip">{{ t().votenImpostor }}</span>
+              <span class="chip tipo">{{ t().categoria }}: {{ r.consigna }}</span>
+              <span class="reloj titular" [class.urgente]="segundos() <= 10">{{ segundos() }}</span>
+            </div>
+            <h1 class="consigna titular">{{ t().quienImpostor }}</h1>
+            <ul class="pistas grandes">
+              @for (j of jugadores(); track j.id; let i = $index) {
+                <li [class.listo]="listos().has(j.id)" [style.animation-delay.ms]="i * 80">
+                  <img class="avatar" [src]="imagen(j.avatar)" [alt]="j.nombre" />
+                  <span class="nombre">{{ j.nombre }}</span>
+                  <span class="pistas-de">
+                    @for (pista of r.pistas[j.id] ?? []; track $index) {
+                      <span class="pista">{{ pista }}</span>
+                    }
+                  </span>
+                  @if (listos().has(j.id)) {
+                    <i class="ph-bold ph-check-circle marca-listo"></i>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+          } @else {
           <section class="ronda">
             <div class="ronda-cabeza">
               <span class="chip">{{ r.tipo === 'chamuyo' ? t().votenVerdad : t().votenMejor }}</span>
@@ -156,6 +226,7 @@
               }
             </ul>
           </section>
+          }
         }
       }
 
@@ -189,7 +260,40 @@
 
       @case ('revelar') {
         @if (ronda(); as r) {
-          @if (r.tipo === 'minijuego') {
+          @if (r.tipo === 'impostor') {
+          <section class="ronda impostor revelacion">
+            <ul class="votos-impostor">
+              @for (j of jugadores(); track j.id) {
+                <li>
+                  <img class="avatar chico" [src]="imagen(j.avatar)" [alt]="j.nombre" [title]="j.nombre" />
+                  <i class="ph-bold ph-arrow-right"></i>
+                  @if (votoDe(j.id); as v) {
+                    <img class="avatar chico" [src]="imagen(avatarDe(v))" [alt]="nombreDe(v)" [title]="nombreDe(v)" />
+                  } @else {
+                    <span class="sin-voto">—</span>
+                  }
+                </li>
+              }
+            </ul>
+            @if (paso() >= 0 && r.impostor) {
+              <div class="impostor-revelado">
+                <img class="avatar enorme" [src]="imagen(avatarDe(r.impostor), r.descubierto ? 'sorpresa' : 'grande')" [alt]="nombreDe(r.impostor)" />
+                <h1 class="titular">{{ nombreDe(r.impostor) }} {{ t().eraImpostor }}</h1>
+                <p class="resultado titular" [class.descubierto]="r.descubierto">{{ r.descubierto ? t().loDescubrieron : t().seEscapo }}</p>
+                <p class="palabra-era">{{ t().laPalabraEra }} <b>{{ r.palabra }}</b></p>
+                <ul class="ganadores">
+                  @for (j of jugadores(); track j.id) {
+                    @if (r.puntosRonda[j.id]) {
+                      <li><img class="avatar chico" [src]="imagen(j.avatar)" [alt]="j.nombre" /><span class="sumados">+{{ r.puntosRonda[j.id] }}</span></li>
+                    }
+                  }
+                </ul>
+              </div>
+            } @else {
+              <h1 class="titular suspenso">{{ t().quienImpostor }}</h1>
+            }
+          </section>
+          } @else if (r.tipo === 'minijuego') {
           <section class="tabla">
             <h1 class="titular tabla-titulo">{{ t().juegos[r.minijuego!].nombre }}</h1>
             <ol class="posiciones">

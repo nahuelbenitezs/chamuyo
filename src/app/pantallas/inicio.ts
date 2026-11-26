@@ -1,8 +1,7 @@
-import { Component, computed, OnDestroy, OnInit, output, signal } from '@angular/core';
-import { contenidoEn } from '../contenido/en';
-import { contenidoEs } from '../contenido/es';
+import { Component, computed, effect, OnDestroy, OnInit, output, signal } from '@angular/core';
+import { cargarContenido } from '../contenido/cargar';
 import { cambiarIdioma, idioma, t } from '../i18n';
-import { mezclar } from '../juego/motor';
+import { Dato, mezclar } from '../juego/motor';
 import { imagen, PERSONAJES, partesConsigna } from '../juego/personajes';
 
 @Component({
@@ -34,8 +33,20 @@ export class PantallaInicio implements OnInit, OnDestroy {
   private timer: ReturnType<typeof setInterval> | null = null;
   private tick = 0;
 
+  private datos = signal<Dato[]>([]);
+
+  constructor() {
+    effect(() => {
+      const lengua = idioma();
+      void cargarContenido(lengua).then((c) => {
+        if (idioma() === lengua) this.datos.set(c.datos);
+      });
+    });
+  }
+
   protected muestra = computed(() => {
-    const datos = (idioma() === 'es' ? contenidoEs : contenidoEn).datos;
+    const datos = this.datos();
+    if (!datos.length) return null;
     const d = datos[this.indice() % datos.length];
     const opciones = mezclar([d.verdad, ...d.senuelos.slice(0, 2)], semilla(this.indice()));
     return { texto: d.texto, verdad: d.verdad, opciones };

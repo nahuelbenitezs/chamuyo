@@ -21,7 +21,8 @@ One shared screen, everyone plays on their phone. 2 to 8 players, in English or 
 
 - **Chamuyo.** A real fact with a blank: *"Octopuses have ___ hearts."* Everyone makes up a fake answer, then all the answers are mixed with the real one. You score by finding the truth and by fooling your friends with your lie.
 - **Wisecracks.** A prompt, everyone answers, and the funniest one wins the votes.
-- **Mixed.** One round of each, taking turns. The last round is worth double.
+- **Impostor.** Everyone gets the secret word on their phone except one player, who only sees the category. Two rounds of one-word clues, then everyone votes out the impostor. 3+ players.
+- **Mixed.** A bit of everything: bluffing, wisecracks, impostor and minigames. The last round is worth double.
 - **Minigames.** Eight short action games where your phone is the controller: a tapping race, a reflex test, dodging falling empanadas, painting the yard, hot potato, streamers that you can't crash into, counting to ten in your head, and a 3D pool fight to push everyone off the float.
 
 ## How it works
@@ -74,7 +75,8 @@ Made by [Nahuel Benítez](https://github.com/nahuelbenitezs). Follow the game on
 
 - **Chamuyo.** Un dato real con un hueco: *"Los pulpos tienen ___ corazones."* Cada uno inventa una respuesta falsa y después se mezclan con la verdadera. Sumás puntos si encontrás la verdad y por cada amigo que cae en tu mentira.
 - **Ocurrencias.** Una consigna, todos responden y se vota la más graciosa.
-- **Mixto.** Una ronda de cada, alternadas. La última vale doble.
+- **Impostor.** A todos les llega la palabra secreta al celular menos a uno, que solo ve la categoría. Dos vueltas de pistas de una palabra y después se vota quién es el impostor. Desde 3 jugadores.
+- **Mixto.** Un poco de todo: chamuyo, ocurrencias, impostor y minijuegos. La última ronda vale doble.
 - **Minijuegos.** Ocho juegos cortos de acción con el celular como control: una carrera a puro toque, una prueba de reflejos, esquivar empanadas, pintar el patio, la papa caliente, una serpentina con la que no podés chocar, contar hasta diez en tu cabeza y, en 3D, tirar a todos de un inflable en la pileta.
 
 ### Cómo funciona
